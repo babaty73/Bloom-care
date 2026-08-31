@@ -1,0 +1,16 @@
+{
+  "name": "bloom-care-backend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Bloom-Care backend",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "mongoose": "^8.18.0"
+  }
+}

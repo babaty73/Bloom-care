@@ -2,6 +2,7 @@ import Medicine from "../models/Medicine.js";
 import Pharmacy from "../models/Pharmacy.js";
 import { ApiError } from "../utils/apiResponse.js";
 import { isPharmacyOpen } from "../utils/pharmacyStatus.js";
+import { isExpired, getPublicVisibilityFilter } from "./expiration.service.js";
 
 // NOTE: This file is shared between the Auth & Pharmacy domain (pharmacy-owned CRUD,
 // above) and the Visitor & Admin domain (public search/details, below). Each side
@@ -172,7 +173,7 @@ export async function searchPublicMedicines({ search, page, limit }) {
 
   const filter = {
     pharmacyId: { $in: activePharmacyIds },
-    $or: [{ expirationDate: null }, { expirationDate: { $gt: now } }],
+    ...getPublicVisibilityFilter(now),
   };
 
   const trimmed = typeof search === "string" ? search.trim() : "";
@@ -213,10 +214,10 @@ export async function getPublicMedicineDetails(medicineId) {
 
   const medicine = await Medicine.findById(medicineId).populate("pharmacyId", PUBLIC_PHARMACY_POPULATE_FIELDS);
 
-  const isExpired = medicine?.expirationDate && medicine.expirationDate <= now;
+  const medicineExpired = medicine ? isExpired(medicine, now) : false;
   const pharmacyUnavailable = !medicine?.pharmacyId || medicine.pharmacyId.status !== "ACTIVE";
 
-  if (!medicine || isExpired || pharmacyUnavailable) {
+  if (!medicine || medicineExpired || pharmacyUnavailable) {
     throw new ApiError(404, "RESOURCE_NOT_FOUND", "Medicine not found");
   }
 

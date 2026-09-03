@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { ApiError } from "../utils/apiResponse.js";
+import { REPORT_REASON_VALUES, REPORT_STATUS_VALUES } from "../models/Report.js";
 
 // Lightweight, dependency-free validation middleware.
 // Contract: docs/ARCHITECTURE.md Validation Contract — this layer checks required
@@ -168,6 +169,86 @@ export function validateMedicineUpdate(req, res, next) {
   }
 
   if (details.length > 0) return next(fail(details));
+  return next();
+}
+
+// Public medicine search query param. Contract: docs/IMPLEMENTATION_DECISIONS.md
+// Medicine Decisions #6-#8 — a single search term is evaluated against both
+// medicineName and genericName; no separate param per field. "search" is the
+// implementation-level param name chosen here (not specified by the docs).
+export function validateMedicineSearchQuery(req, res, next) {
+  const { search } = req.query;
+  if (search !== undefined && typeof search !== "string") {
+    return next(fail(["search must be a single string value"]));
+  }
+  return next();
+}
+
+// Contract: docs/IMPLEMENTATION_DECISIONS.md Report Decisions §1-§2, §6.
+export function validateReportCreate(req, res, next) {
+  const { medicineId, pharmacyId, reason, additionalComment } = req.body || {};
+  const details = [];
+
+  if (!isValidObjectId(medicineId)) details.push("medicineId must be a valid id");
+  if (!isValidObjectId(pharmacyId)) details.push("pharmacyId must be a valid id");
+  if (!reason || !REPORT_REASON_VALUES.includes(reason)) {
+    details.push(`reason must be one of: ${REPORT_REASON_VALUES.join(", ")}`);
+  }
+  if (additionalComment !== undefined && additionalComment !== null) {
+    if (typeof additionalComment !== "string" || additionalComment.trim() === "") {
+      details.push("additionalComment must contain meaningful non-whitespace content when provided");
+    } else if (additionalComment.trim().length > 500) {
+      details.push("additionalComment must be at most 500 characters");
+    }
+  }
+
+  if (details.length > 0) return next(fail(details));
+  return next();
+}
+
+// Contract: docs/IMPLEMENTATION_DECISIONS.md Report Decisions §4 — only
+// PENDING → RESOLVED and PENDING → REJECTED are valid; the current-status check
+// itself is a business rule enforced in report.service.js, not here.
+export function validateReportStatusUpdate(req, res, next) {
+  const { status } = req.body || {};
+  if (!status || !["RESOLVED", "REJECTED"].includes(status)) {
+    return next(fail(["status must be RESOLVED or REJECTED"]));
+  }
+  return next();
+}
+
+// Optional admin report filters. Contract: docs/ARCHITECTURE.md §2.4.
+export function validateReportFilters(req, res, next) {
+  const { status, pharmacyId, medicineId } = req.query;
+  const details = [];
+  if (status !== undefined && !REPORT_STATUS_VALUES.includes(status)) {
+    details.push(`status filter must be one of: ${REPORT_STATUS_VALUES.join(", ")}`);
+  }
+  if (pharmacyId !== undefined && !isValidObjectId(pharmacyId)) details.push("pharmacyId filter must be a valid id");
+  if (medicineId !== undefined && !isValidObjectId(medicineId)) details.push("medicineId filter must be a valid id");
+
+  if (details.length > 0) return next(fail(details));
+  return next();
+}
+
+// Admin domain. PHARMACY_STATUS_VALUES mirrors models/Pharmacy.js's `status` enum
+// (ACTIVE/SUSPENDED/BANNED) — not imported to avoid a cross-domain dependency on
+// that file's internals; Pharmacy.js does not currently export this list.
+const PHARMACY_STATUS_VALUES = ["ACTIVE", "SUSPENDED", "BANNED"];
+
+export function validatePharmacyStatusUpdate(req, res, next) {
+  const { status } = req.body || {};
+  if (!status || !PHARMACY_STATUS_VALUES.includes(status)) {
+    return next(fail([`status must be one of: ${PHARMACY_STATUS_VALUES.join(", ")}`]));
+  }
+  return next();
+}
+
+export function validateAdminPharmacyFilters(req, res, next) {
+  const { status } = req.query;
+  if (status !== undefined && !PHARMACY_STATUS_VALUES.includes(status)) {
+    return next(fail([`status filter must be one of: ${PHARMACY_STATUS_VALUES.join(", ")}`]));
+  }
   return next();
 }
 

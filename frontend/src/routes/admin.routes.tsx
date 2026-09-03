@@ -1,10 +1,19 @@
 import { Route } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
 import LoginPage from "../pages/admin/LoginPage";
+import DashboardPage from "../pages/admin/DashboardPage";
+import PharmaciesPage from "../pages/admin/PharmaciesPage";
+import ReportsPage from "../pages/admin/ReportsPage";
+import MedicineListingsPage from "../pages/admin/MedicineListingsPage";
 
-// NOTE: only the admin login route is implemented here (Auth domain, shared
-// infrastructure). Protected admin pages (dashboard, pharmacies, reports) belong
-// to the Reports+Admin domain — add them here with
-// <ProtectedRoute allowedRole="admin" redirectTo="/admin/login" /> once built.
 export function adminRoutes() {
-  return [<Route key="admin-login" path="/admin/login" element={<LoginPage />} />];
+  return [
+    <Route key="admin-login" path="/admin/login" element={<LoginPage />} />,
+    <Route key="admin-protected" element={<ProtectedRoute allowedRole="admin" redirectTo="/admin/login" />}>
+      <Route path="/admin/dashboard" element={<DashboardPage />} />
+      <Route path="/admin/pharmacies" element={<PharmaciesPage />} />
+      <Route path="/admin/reports" element={<ReportsPage />} />
+      <Route path="/admin/medicines" element={<MedicineListingsPage />} />
+    </Route>,
+  ];
 }

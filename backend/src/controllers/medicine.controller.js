@@ -1,10 +1,9 @@
 import * as medicineService from "../services/medicine.service.js";
 import { sendSuccess } from "../utils/apiResponse.js";
 
-// NOTE: This file is shared with the medicine-search domain. Only the pharmacy-owned
-// CRUD handlers (mounted under /api/pharmacies/me/medicines) are implemented here.
-// Public search handlers (GET /api/medicines, GET /api/medicines/:id) belong to that
-// domain and should be added here, not replace these exports.
+// NOTE: This file is shared between the Auth & Pharmacy domain (pharmacy-owned CRUD,
+// mounted under /api/pharmacies/me/medicines) and the Visitor & Admin domain (public
+// search/details, mounted under /api/medicines, added below).
 
 export async function createMedicine(req, res, next) {
   try {
@@ -54,6 +53,36 @@ export async function listOwnMedicines(req, res, next) {
       statusCode: 200,
       data: result,
       message: "Medicines retrieved successfully",
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+// --- Public visitor endpoints (Visitor & Admin domain) ---
+
+export async function searchMedicines(req, res, next) {
+  try {
+    const { search } = req.query;
+    const result = await medicineService.searchPublicMedicines({ search, ...req.pagination });
+    return sendSuccess(res, {
+      statusCode: 200,
+      data: result,
+      message: "Medicines retrieved successfully",
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function getMedicineDetails(req, res, next) {
+  try {
+    const { id } = req.params;
+    const medicine = await medicineService.getPublicMedicineDetails(id);
+    return sendSuccess(res, {
+      statusCode: 200,
+      data: medicine,
+      message: "Medicine details retrieved successfully",
     });
   } catch (err) {
     return next(err);

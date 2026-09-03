@@ -5,9 +5,8 @@ import RegisterPage from "../pages/pharmacy/RegisterPage";
 import DashboardPage from "../pages/pharmacy/DashboardPage";
 import ProfilePage from "../pages/pharmacy/ProfilePage";
 import MedicinesPage from "../pages/pharmacy/MedicinesPage";
+import ReportsPage from "../pages/pharmacy/ReportsPage";
 
-// NOTE: ReportsPage.tsx (pharmacy viewing reports concerning its own pharmacy)
-// belongs to the Reports+Admin domain and is not wired here yet.
 export function pharmacyRoutes() {
   return [
     <Route key="pharmacy-login" path="/pharmacy/login" element={<LoginPage />} />,
@@ -19,6 +18,7 @@ export function pharmacyRoutes() {
       <Route path="/pharmacy/dashboard" element={<DashboardPage />} />
       <Route path="/pharmacy/profile" element={<ProfilePage />} />
       <Route path="/pharmacy/medicines" element={<MedicinesPage />} />
+      <Route path="/pharmacy/reports" element={<ReportsPage />} />
     </Route>,
   ];
 }

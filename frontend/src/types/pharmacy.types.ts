@@ -2,6 +2,11 @@ import type { AuthenticatedPharmacy } from "./auth.types";
 
 export type Pharmacy = AuthenticatedPharmacy;
 
+// Public (unauthenticated) pharmacy response shape. Contract: docs/IMPLEMENTATION_DECISIONS.md
+// §7 "Public vs private pharmacy fields" — email is never included here, unlike the
+// pharmacy's own private profile (Pharmacy, above).
+export type PublicPharmacyProfile = Omit<Pharmacy, "email">;
+
 export interface PharmacyProfileUpdatePayload {
   pharmacyName?: string;
   address?: string;
@@ -16,6 +21,7 @@ export interface PharmacyDashboard {
   totalMedicines: number;
   inStockCount: number;
   outOfStockCount: number;
+  reportsCount: number;
   recentlyUpdated: Array<{
     _id: string;
     medicineName: string;

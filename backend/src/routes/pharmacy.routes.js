@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as pharmacyController from "../controllers/pharmacy.controller.js";
 import * as medicineController from "../controllers/medicine.controller.js";
+import * as reportController from "../controllers/report.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRole } from "../middleware/role.middleware.js";
 import {
@@ -42,6 +43,12 @@ router.delete(
   validateObjectIdParam("id"),
   medicineController.deleteMedicine,
 );
+
+// Reports concerning this pharmacy's own listings. Contract: docs/ARCHITECTURE.md
+// §2.4 (documented under the Reports domain, mounted here under /pharmacies/me —
+// same pattern as the medicine CRUD block above). Controller/service logic lives
+// in report.controller.js/report.service.js (Reports domain), not duplicated here.
+router.get("/me/reports", authMiddleware, requireRole("pharmacy"), validatePagination, reportController.listOwnReports);
 
 // --- Public route ---
 router.get("/:id", validateObjectIdParam("id"), pharmacyController.getPharmacyById);

@@ -38,7 +38,7 @@ function DashboardPage() {
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-10">
       <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-gray-200 p-4">
           <p className="text-sm text-gray-500">Total Medicines</p>
           <p className="text-2xl font-semibold text-gray-900">{dashboard.totalMedicines}</p>
@@ -51,6 +51,10 @@ function DashboardPage() {
           <p className="text-sm text-gray-500">Out of Stock</p>
           <p className="text-2xl font-semibold text-red-600">{dashboard.outOfStockCount}</p>
         </div>
+        <Link to="/pharmacy/reports" className="rounded-lg border border-gray-200 p-4 hover:bg-gray-50">
+          <p className="text-sm text-gray-500">Reports</p>
+          <p className="text-2xl font-semibold text-gray-900">{dashboard.reportsCount}</p>
+        </Link>
       </div>
 
       <div>

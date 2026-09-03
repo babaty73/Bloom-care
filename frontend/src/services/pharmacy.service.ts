@@ -1,8 +1,8 @@
 import { apiRequest } from "../utils/api";
-import type { Pharmacy, PharmacyProfileUpdatePayload, PharmacyDashboard } from "../types/pharmacy.types";
+import type { Pharmacy, PublicPharmacyProfile, PharmacyProfileUpdatePayload, PharmacyDashboard } from "../types/pharmacy.types";
 
 export function getPharmacyById(id: string) {
-  return apiRequest<Pharmacy>(`/pharmacies/${id}`, { auth: false });
+  return apiRequest<PublicPharmacyProfile>(`/pharmacies/${id}`, { auth: false });
 }
 
 export function getOwnProfile() {

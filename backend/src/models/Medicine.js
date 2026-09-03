@@ -66,6 +66,17 @@ const medicineSchema = new mongoose.Schema(
       required: false,
       default: null,
     },
+    // Technically necessary addition for the Expiration domain (not a new product
+    // field): records when an expiration notification was last requested for this
+    // listing, so repeated expiration-processing runs don't re-request notification
+    // for the same already-expired listing every time. Delivery itself remains
+    // PENDING CONFIRMATION (see notification.service.js) — this only tracks whether
+    // a request was already made.
+    notifiedExpiredAt: {
+      type: Date,
+      required: false,
+      default: null,
+    },
   },
   { timestamps: true },
 );

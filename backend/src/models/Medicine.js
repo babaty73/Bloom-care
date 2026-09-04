@@ -63,7 +63,7 @@ const medicineSchema = new mongoose.Schema(
     },
     expirationDate: {
       type: Date,
-      required: false,
+      required: true,
       default: null,
     },
     // Technically necessary addition for the Expiration domain (not a new product

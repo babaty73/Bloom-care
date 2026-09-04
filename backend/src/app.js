@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import authRoutes from "./routes/auth.routes.js";
 import pharmacyRoutes from "./routes/pharmacy.routes.js";
 import medicineRoutes from "./routes/medicine.routes.js";
@@ -8,6 +9,10 @@ import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 
 const app = express();
+
+app.use(cors({
+  origin: "http://localhost:5173",
+}));
 
 app.use(express.json());
 

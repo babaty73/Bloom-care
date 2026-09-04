@@ -193,7 +193,7 @@ function MedicinesPage() {
           </label>
 
           <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
-            Expiration Date (optional)
+            Expiration Date
             <input
               type="date"
               value={form.expirationDate}

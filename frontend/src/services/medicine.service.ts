@@ -35,6 +35,10 @@ export function searchMedicines(params: PublicMedicineSearchParams = {}) {
   if (params.search) query.set("search", params.search);
   query.set("page", String(params.page ?? 1));
   query.set("limit", String(params.limit ?? 20));
+  if (typeof params.latitude === "number" && typeof params.longitude === "number") {
+    query.set("lat", String(params.latitude));
+    query.set("lng", String(params.longitude));
+  }
   return apiRequest<PaginatedPublicMedicines>(`/medicines?${query.toString()}`, { auth: false });
 }
 

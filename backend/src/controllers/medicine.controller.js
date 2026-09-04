@@ -64,7 +64,8 @@ export async function listOwnMedicines(req, res, next) {
 export async function searchMedicines(req, res, next) {
   try {
     const { search } = req.query;
-    const result = await medicineService.searchPublicMedicines({ search, ...req.pagination });
+    const { latitude, longitude } = req.visitorLocation ?? {};
+    const result = await medicineService.searchPublicMedicines({ search, ...req.pagination, latitude, longitude });
     return sendSuccess(res, {
       statusCode: 200,
       data: result,

@@ -3,6 +3,7 @@ import Pharmacy from "../models/Pharmacy.js";
 import { ApiError } from "../utils/apiResponse.js";
 import { isPharmacyOpen } from "../utils/pharmacyStatus.js";
 import { isExpired, getPublicVisibilityFilter } from "./expiration.service.js";
+import { calculateDistanceKm } from "../utils/distance.js";
 
 // NOTE: This file is shared between the Auth & Pharmacy domain (pharmacy-owned CRUD,
 // above) and the Visitor & Admin domain (public search/details, below). Each side
@@ -154,8 +155,10 @@ function toPublicMedicine(medicineDoc) {
 
 // Public pharmacy-selection fields for population. Excludes email/passwordHash;
 // includes status only to decide inclusion below, never returned to the client.
+// Includes location (Nearby Pharmacy / Distance decision) for internal distance
+// calculation only — toPublicPharmacySummary() below never returns it.
 const PUBLIC_PHARMACY_POPULATE_FIELDS =
-  "pharmacyName address phone googleMapsLink openingTime closingTime logo status";
+  "pharmacyName address phone googleMapsLink openingTime closingTime logo status location";
 
 /**
  * Public medicine search for visitors.
@@ -165,8 +168,16 @@ const PUBLIC_PHARMACY_POPULATE_FIELDS =
  * - Excludes expired listings (non-destructive: they remain in the database).
  * - Case-insensitive, whitespace-trimmed, partial match over medicineName/genericName.
  * - Ordering: in-stock first, then lower price, then most-recently-updated, then _id.
+ *
+ * Nearby Pharmacy / Distance decision: when the caller supplies visitor
+ * `latitude`/`longitude`, each result additionally gets a `distanceKm` field
+ * (straight-line distance to that listing's pharmacy; null when the pharmacy's
+ * location hasn't been resolved yet), and results are re-ordered nearest-first
+ * ahead of the existing tie-break ordering above. When no coordinates are
+ * supplied, behavior and response shape are byte-identical to before this
+ * feature existed — this is purely additive.
  */
-export async function searchPublicMedicines({ search, page, limit }) {
+export async function searchPublicMedicines({ search, page, limit, latitude, longitude }) {
   const now = new Date();
 
   const activePharmacyIds = (await Pharmacy.find({ status: "ACTIVE" }, "_id")).map((p) => p._id);
@@ -182,19 +193,64 @@ export async function searchPublicMedicines({ search, page, limit }) {
     filter.$and = [{ $or: [{ medicineName: pattern }, { genericName: pattern }] }];
   }
 
-  const skip = (page - 1) * limit;
+  const hasVisitorLocation = typeof latitude === "number" && typeof longitude === "number";
 
-  const [items, total] = await Promise.all([
-    Medicine.find(filter)
-      .populate("pharmacyId", PUBLIC_PHARMACY_POPULATE_FIELDS)
-      .sort({ inStock: -1, price: 1, lastUpdated: -1, _id: 1 })
-      .skip(skip)
-      .limit(limit),
-    Medicine.countDocuments(filter),
-  ]);
+  if (!hasVisitorLocation) {
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      Medicine.find(filter)
+        .populate("pharmacyId", PUBLIC_PHARMACY_POPULATE_FIELDS)
+        .sort({ inStock: -1, price: 1, lastUpdated: -1, _id: 1 })
+        .skip(skip)
+        .limit(limit),
+      Medicine.countDocuments(filter),
+    ]);
+
+    return {
+      items: items.map(toPublicMedicine),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
+  }
+
+  // Nearby mode: distance depends on the populated pharmacy's location, which
+  // MongoDB cannot sort/paginate by without a geospatial aggregation (out of
+  // scope for this decision — no routing/geo query provider, smallest clean
+  // integration point). We fetch the full filtered set, compute distance in
+  // application code, sort nearest-first, then paginate in memory. The existing
+  // tie-break ordering (in-stock, price, lastUpdated, _id) is preserved as a
+  // stable secondary order beneath distance.
+  const allMatching = await Medicine.find(filter)
+    .populate("pharmacyId", PUBLIC_PHARMACY_POPULATE_FIELDS)
+    .sort({ inStock: -1, price: 1, lastUpdated: -1, _id: 1 });
+
+  const withDistance = allMatching.map((doc) => {
+    const pharmacyLocation = doc.pharmacyId?.location;
+    const distanceKm =
+      pharmacyLocation && typeof pharmacyLocation.latitude === "number" && typeof pharmacyLocation.longitude === "number"
+        ? Math.round(calculateDistanceKm({ latitude, longitude }, pharmacyLocation) * 10) / 10
+        : null;
+    return { ...toPublicMedicine(doc), distanceKm };
+  });
+
+  withDistance.sort((a, b) => {
+    if (a.distanceKm === null && b.distanceKm === null) return 0;
+    if (a.distanceKm === null) return 1;
+    if (b.distanceKm === null) return -1;
+    return a.distanceKm - b.distanceKm;
+  });
+
+  const total = withDistance.length;
+  const skip = (page - 1) * limit;
+  const items = withDistance.slice(skip, skip + limit);
 
   return {
-    items: items.map(toPublicMedicine),
+    items,
     pagination: {
       page,
       limit,

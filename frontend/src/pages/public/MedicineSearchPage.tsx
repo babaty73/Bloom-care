@@ -10,6 +10,12 @@ import { formatOpenStatusLabel } from "../../utils/pharmacyStatus";
 
 type LoadState = "loading" | "error" | "success";
 
+// Nearby Pharmacy / Distance decision: visitor coordinates come from the browser
+// Geolocation API only when the visitor asks for nearby/distance functionality,
+// and are kept in component state only — never persisted (no localStorage, no
+// URL search params, no backend storage).
+type LocationRequestState = "idle" | "requesting" | "granted" | "denied" | "unavailable";
+
 const LIMIT = 20;
 
 function MedicineSearchPage() {
@@ -23,6 +29,9 @@ function MedicineSearchPage() {
   const [items, setItems] = useState<PublicMedicineResult[]>([]);
   const [totalPages, setTotalPages] = useState(1);
 
+  const [locationState, setLocationState] = useState<LocationRequestState>("idle");
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+
   useEffect(() => {
     setQueryInput(search);
   }, [search]);
@@ -34,7 +43,13 @@ function MedicineSearchPage() {
       setState("loading");
       setError(null);
       try {
-        const result = await medicineService.searchMedicines({ search: search || undefined, page, limit: LIMIT });
+        const result = await medicineService.searchMedicines({
+          search: search || undefined,
+          page,
+          limit: LIMIT,
+          latitude: coords?.latitude,
+          longitude: coords?.longitude,
+        });
         if (cancelled) return;
         setItems(result.items);
         setTotalPages(result.pagination.totalPages);
@@ -50,7 +65,38 @@ function MedicineSearchPage() {
     return () => {
       cancelled = true;
     };
-  }, [search, page]);
+  }, [search, page, coords]);
+
+  function resetPage() {
+    const next = new URLSearchParams(searchParams);
+    next.delete("page");
+    setSearchParams(next);
+  }
+
+  function handleFindNearby() {
+    if (!navigator.geolocation) {
+      setLocationState("unavailable");
+      return;
+    }
+
+    setLocationState("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        setLocationState("granted");
+        resetPage();
+      },
+      (geoError) => {
+        setLocationState(geoError.code === geoError.PERMISSION_DENIED ? "denied" : "unavailable");
+      },
+    );
+  }
+
+  function clearNearby() {
+    setCoords(null);
+    setLocationState("idle");
+    resetPage();
+  }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -82,6 +128,39 @@ function MedicineSearchPage() {
         </button>
       </form>
 
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        {locationState !== "granted" && (
+          <button
+            type="button"
+            onClick={handleFindNearby}
+            disabled={locationState === "requesting"}
+            className="rounded-md border border-emerald-300 px-3 py-1.5 font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+          >
+            {locationState === "requesting" ? "Finding your location..." : "Find Nearby Pharmacies"}
+          </button>
+        )}
+        {locationState === "granted" && (
+          <div className="flex items-center gap-2">
+            <span className="rounded-md bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700">
+              Showing nearest pharmacies first
+            </span>
+            <button type="button" onClick={clearNearby} className="text-xs font-medium text-gray-500 hover:underline">
+              Clear
+            </button>
+          </div>
+        )}
+        {locationState === "denied" && (
+          <span className="text-xs text-red-600">
+            Location access was denied. Enable it in your browser settings to see nearby pharmacies.
+          </span>
+        )}
+        {locationState === "unavailable" && (
+          <span className="text-xs text-red-600">
+            We couldn&apos;t determine your location. Please try again.
+          </span>
+        )}
+      </div>
+
       {state === "loading" && <Loading label="Searching..." />}
       {state === "error" && <ErrorMessage message={error ?? "Something went wrong"} onRetry={() => setSearchParams(searchParams)} />}
       {state === "success" && items.length === 0 && (
@@ -105,6 +184,9 @@ function MedicineSearchPage() {
                       <Link to={`/pharmacies/${item.pharmacy._id}`} className="text-sm text-emerald-700 hover:underline">
                         {item.pharmacy.pharmacyName}
                       </Link>
+                    )}
+                    {typeof item.distanceKm === "number" && (
+                      <span className="ml-2 text-xs font-medium text-gray-500">{item.distanceKm} km away</span>
                     )}
                   </div>
                   <div className="text-right">

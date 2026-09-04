@@ -562,15 +562,11 @@ Changes to these contracts require communication between both developers before 
 
 The following requirements are explicit in the product specification but do not contain enough implementation detail to select a concrete mechanism. They remain intentionally unresolved.
 
-### 9.1 Nearby pharmacy distance calculation
+### 9.1 Nearby pharmacy distance calculation — RESOLVED
 
 Required user-facing behavior includes nearby pharmacies and displayed distances such as `1 km away` and `2 km away`.
 
-Specified pharmacy input remains a Google Maps shared link. The architecture is:
-
-`Google Maps shared link → location resolution → usable location → distance calculation → displayed distance`
-
-No latitude/longitude input fields are added and no external location/distance provider is selected yet.
+This is now decided. See docs/IMPLEMENTATION_DECISIONS.md "Distance Decision" for the full resolved architecture: Geoapify forward geocoding resolves a pharmacy's Google Maps shared link to latitude/longitude on create/update only; the backend calculates straight-line (Haversine) distance from visitor-supplied coordinates; no routing API, no manual latitude/longitude input, no geocoding on every visitor search.
 
 ### 9.2 Notification delivery mechanism
 
@@ -600,9 +596,9 @@ The specification requires pharmacy registration/login but the Pharmacy field li
 
 The Admin field list includes `password`, but it does not explicitly say whether the value is plaintext or hashed. Secure implementation must treat it as a secure stored credential representation; no plaintext password storage is permitted.
 
-### Nearby/distance data
+### Nearby/distance data — RESOLVED
 
-The specification requires nearby pharmacies and displayed distances but only defines Google Maps shared-link input. It does not define how the system obtains a usable location or calculates distance.
+The specification requires nearby pharmacies and displayed distances. This is now resolved — see docs/IMPLEMENTATION_DECISIONS.md "Distance Decision": Google Maps shared-link input is unchanged; Geoapify resolves it to latitude/longitude on pharmacy create/update only; distance is calculated straight-line on the backend.
 
 ### Notification channel
 

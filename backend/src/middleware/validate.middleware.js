@@ -184,6 +184,41 @@ export function validateMedicineSearchQuery(req, res, next) {
   return next();
 }
 
+// Nearby Pharmacy / Distance decision. Visitor coordinates come from the
+// browser Geolocation API (never persisted) and are supplied as optional "lat"/
+// "lng" query params on public medicine search. Both must be provided together,
+// as valid numbers within real-world latitude/longitude ranges.
+export function validateNearbyQuery(req, res, next) {
+  const { lat, lng } = req.query;
+  const details = [];
+
+  if ((lat === undefined) !== (lng === undefined)) {
+    details.push("lat and lng must be provided together");
+  }
+
+  let latitude;
+  let longitude;
+
+  if (lat !== undefined) {
+    latitude = Number(lat);
+    if (Number.isNaN(latitude) || latitude < -90 || latitude > 90) {
+      details.push("lat must be a number between -90 and 90");
+    }
+  }
+  if (lng !== undefined) {
+    longitude = Number(lng);
+    if (Number.isNaN(longitude) || longitude < -180 || longitude > 180) {
+      details.push("lng must be a number between -180 and 180");
+    }
+  }
+
+  if (details.length > 0) return next(fail(details));
+
+  req.visitorLocation =
+    latitude !== undefined && longitude !== undefined ? { latitude, longitude } : null;
+  return next();
+}
+
 // Contract: docs/IMPLEMENTATION_DECISIONS.md Report Decisions §1-§2, §6.
 export function validateReportCreate(req, res, next) {
   const { medicineId, pharmacyId, reason, additionalComment } = req.body || {};

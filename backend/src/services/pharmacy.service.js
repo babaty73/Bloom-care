@@ -3,10 +3,14 @@ import Medicine from "../models/Medicine.js";
 import Report from "../models/Report.js";
 import { ApiError } from "../utils/apiResponse.js";
 import { isPharmacyOpen } from "../utils/pharmacyStatus.js";
+import { resolvePharmacyLocation } from "../utils/googleMaps.js";
 
 function toPublicPharmacy(pharmacyDoc) {
   const pharmacy = pharmacyDoc.toObject ? pharmacyDoc.toObject() : pharmacyDoc;
   delete pharmacy.passwordHash;
+  // location is internal-only (Nearby Pharmacy / Distance decision) — never
+  // exposed in API responses, including to the pharmacy itself.
+  delete pharmacy.location;
   return {
     ...pharmacy,
     isOpen: isPharmacyOpen(pharmacy.openingTime, pharmacy.closingTime),
@@ -54,6 +58,19 @@ export async function updateOwnProfile(pharmacyId, updates) {
   for (const field of editableFields) {
     if (updates[field] !== undefined) {
       pharmacy[field] = updates[field];
+    }
+  }
+
+  // Nearby Pharmacy / Distance decision: re-resolve location whenever the
+  // Google Maps link changes. Best-effort/non-blocking, same as registration —
+  // the profile update must not fail because geocoding is unavailable. On
+  // failure, location is cleared rather than left pointing at the old link.
+  if (updates.googleMapsLink !== undefined) {
+    try {
+      pharmacy.location = await resolvePharmacyLocation(updates.googleMapsLink);
+    } catch (err) {
+      console.warn(`[pharmacy location] could not resolve updated location for pharmacy ${pharmacyId}: ${err.message}`);
+      pharmacy.location = null;
     }
   }
 

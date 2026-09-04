@@ -75,12 +75,21 @@ export interface PublicMedicineResult {
   expirationDate: string | null;
   lastUpdated: string;
   pharmacy: PublicPharmacySummary | null;
+  // Nearby Pharmacy / Distance decision: present only when the search request
+  // included visitor coordinates. null means the pharmacy's location hasn't
+  // been resolved yet.
+  distanceKm?: number | null;
 }
 
 export interface PublicMedicineSearchParams {
   search?: string;
   page?: number;
   limit?: number;
+  // Nearby Pharmacy / Distance decision: from the browser Geolocation API only,
+  // requested when the visitor asks for nearby/distance functionality. Never
+  // persisted — kept in component state only.
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface PaginatedPublicMedicines {

@@ -807,40 +807,35 @@ Equal opening/closing times are invalid.
 
 # Distance Decision
 
-## Status: PENDING CONFIRMATION
+## Status: DECIDED
 
 The specification requires nearby pharmacies and displayed distances such as `1 km away` and `2 km away`.
 
-The pharmacy UX must continue to use the specified Google Maps shared-link workflow.
+The pharmacy UX continues to use the specified Google Maps shared-link workflow. No manual latitude/longitude entry exists anywhere in the pharmacy forms.
 
 The architectural flow is:
 
 ```text
 Google Maps shared link
         ↓
-location resolution
+Geoapify location resolution (pharmacy create/update only)
         ↓
-usable location
+latitude/longitude stored internally on Pharmacy
         ↓
-distance calculation
+straight-line distance calculation (backend, Haversine — no routing API)
         ↓
 displayed distance
 ```
 
-The following are not decided:
+Resolved details:
 
-- geocoding provider,
-- Google Maps API usage,
-- distance provider,
-- coordinate storage strategy,
-- user-location source,
-- distance sorting behavior.
-
-No manual latitude/longitude entry may be added to the pharmacy UX.
-
-**Claude must not independently select an external provider.**
-
-Before distance implementation begins, both developers must explicitly agree on the missing implementation details.
+- **Geocoding provider**: Geoapify (forward geocoding endpoint). Called from `utils/googleMaps.js` — the same file that already owned Google Maps shared-link handling.
+- **When Geoapify is called**: only when a pharmacy creates or updates its `googleMapsLink` (registration, or profile update where `googleMapsLink` changes). Never on visitor search — public search never re-geocodes.
+- **Coordinate storage**: `Pharmacy.location = { latitude, longitude }`, resolved internally, `null` until resolved. Never exposed in any API response — internal to distance calculation only. Resolution is best-effort: if Geoapify is unavailable or the link can't be resolved, pharmacy create/update still succeeds and `location` stays `null` rather than saving invalid/partial coordinates; that pharmacy is simply excluded from distance-sorted results until its link resolves. Flagged for developer confirmation as an implementation choice, not mandated by this decision.
+- **Distance calculation**: straight-line (Haversine) in `utils/distance.js`, computed on the backend. No routing API, no external distance provider.
+- **Visitor location source**: browser Geolocation API, requested by the frontend only when the visitor asks for nearby/distance functionality (not on every page load). Visitor coordinates are never persisted — not to the database, not to browser storage, not in the URL — they exist only in frontend component state for the duration of the request.
+- **Public search integration**: `GET /api/medicines` accepts optional `lat`/`lng` query params (validated as real-world latitude/longitude, both-or-neither). When supplied, each result gets an additive `distanceKm` field and results are sorted nearest-first (unresolved-location pharmacies sorted last), ahead of the existing in-stock/price/lastUpdated/`_id` tie-break ordering. When omitted, search behavior and response shape are unchanged from before this decision.
+- **Excluded Geoapify features**: no routing, autocomplete, or reverse geocoding — forward geocoding only.
 
 ---
 

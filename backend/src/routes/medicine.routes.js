@@ -3,6 +3,7 @@ import * as medicineController from "../controllers/medicine.controller.js";
 import {
   validateObjectIdParam,
   validateMedicineSearchQuery,
+  validateNearbyQuery,
   validatePagination,
 } from "../middleware/validate.middleware.js";
 
@@ -15,7 +16,13 @@ import {
 
 const router = Router();
 
-router.get("/", validateMedicineSearchQuery, validatePagination, medicineController.searchMedicines);
+router.get(
+  "/",
+  validateMedicineSearchQuery,
+  validateNearbyQuery,
+  validatePagination,
+  medicineController.searchMedicines,
+);
 router.get("/:id", validateObjectIdParam("id"), medicineController.getMedicineDetails);
 
 export default router;

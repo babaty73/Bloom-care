@@ -62,6 +62,23 @@ const pharmacySchema = new mongoose.Schema(
       enum: ["ACTIVE", "SUSPENDED", "BANNED"],
       default: "ACTIVE",
     },
+    // Nearby Pharmacy / Distance decision (docs/IMPLEMENTATION_DECISIONS.md
+    // Distance Decision): resolved internally from googleMapsLink via Geoapify
+    // (see utils/googleMaps.js). NEVER a user-entered field — no manual
+    // latitude/longitude input exists anywhere in the pharmacy forms. Never
+    // exposed in public/own-profile API responses; used only for server-side
+    // distance calculation. null until resolution succeeds at least once.
+    location: {
+      type: new mongoose.Schema(
+        {
+          latitude: { type: Number, required: true, min: -90, max: 90 },
+          longitude: { type: Number, required: true, min: -180, max: 180 },
+        },
+        { _id: false },
+      ),
+      required: false,
+      default: null,
+    },
   },
   { timestamps: true },
 );

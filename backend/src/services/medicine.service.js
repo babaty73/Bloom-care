@@ -27,10 +27,23 @@ async function getOwnedMedicineOrThrow(pharmacyId, medicineId) {
 export async function createMedicineForPharmacy(pharmacyId, data) {
   const { medicineName, genericName, brandName, description, category, price, quantity, expirationDate } = data;
 
+  // Contract: docs/ARCHITECTURE.md §1.3 — "Referenced pharmacy must exist when
+  // creating/updating a listing." (Production hardening fix: this was
+  // previously unchecked, allowing an orphaned Medicine to be created if the
+  // pharmacy account no longer exists.)
+  const pharmacy = await Pharmacy.findById(pharmacyId, "_id");
+  if (!pharmacy) {
+    throw new ApiError(404, "RESOURCE_NOT_FOUND", "Pharmacy not found");
+  }
+
   if (quantity < 0) {
     throw new ApiError(400, "INVALID_QUANTITY", "quantity must not be negative");
   }
 
+  // expirationDate is required (docs/IMPLEMENTATION_DECISIONS.md Medicine
+  // Decision #4) and is now enforced by validateMedicineCreate before this
+  // service function is ever called — passed through as-is rather than
+  // silently substituting null on omission.
   const medicine = await Medicine.create({
     pharmacyId,
     medicineName,
@@ -42,7 +55,7 @@ export async function createMedicineForPharmacy(pharmacyId, data) {
     quantity,
     inStock: computeInStock(quantity),
     lastUpdated: new Date(),
-    expirationDate: expirationDate ?? null,
+    expirationDate,
   });
 
   return medicine;

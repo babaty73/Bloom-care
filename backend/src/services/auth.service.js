@@ -48,7 +48,7 @@ export async function registerPharmacy({
   try {
     location = await resolvePharmacyLocation(googleMapsLink);
   } catch (err) {
-    console.warn(`[pharmacy location] could not resolve location for new pharmacy (${email}): ${err.message}`);
+    console.warn(`[pharmacy location] could not resolve location for new pharmacy: ${err.message}`);
   }
 
   const pharmacy = await Pharmacy.create({
@@ -79,6 +79,14 @@ export async function loginPharmacy({ email, password }) {
   const passwordMatches = await bcrypt.compare(password, pharmacy.passwordHash);
   if (!passwordMatches) {
     throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid email or password");
+  }
+
+  // Pharmacy status enforcement: suspended/banned pharmacies cannot log in.
+  // Checked after credential verification (not before) so a wrong password
+  // still yields the same INVALID_CREDENTIALS response regardless of status,
+  // avoiding leaking account-existence/status information to a guesser.
+  if (pharmacy.status !== "ACTIVE") {
+    throw new ApiError(403, "FORBIDDEN", "This pharmacy account is suspended or banned");
   }
 
   const token = signToken({ sub: pharmacy._id.toString(), role: "pharmacy" });

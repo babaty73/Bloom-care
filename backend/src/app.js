@@ -7,11 +7,14 @@ import reportRoutes from "./routes/report.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import { notFoundMiddleware } from "./middleware/notFound.middleware.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
+import config from "./config/env.js";
 
 const app = express();
 
+// CORS_ORIGIN env var (see .env.example); defaults to the local Vite dev
+// server so local development keeps working unconfigured.
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: config.corsOrigin,
 }));
 
 app.use(express.json());

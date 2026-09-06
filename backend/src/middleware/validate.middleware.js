@@ -119,7 +119,9 @@ export function validateMedicineCreate(req, res, next) {
   if (typeof quantity !== "number" || Number.isNaN(quantity) || quantity < 0 || !Number.isInteger(quantity)) {
     details.push("quantity must be a non-negative integer");
   }
-  if (expirationDate !== undefined && expirationDate !== null && Number.isNaN(Date.parse(expirationDate))) {
+  if (expirationDate === undefined || expirationDate === null || expirationDate === "") {
+    details.push("expirationDate is required");
+  } else if (Number.isNaN(Date.parse(expirationDate))) {
     details.push("expirationDate must be a valid date");
   }
 
@@ -160,12 +162,12 @@ export function validateMedicineUpdate(req, res, next) {
   ) {
     details.push("quantity must be a non-negative integer");
   }
-  if (
-    body.expirationDate !== undefined &&
-    body.expirationDate !== null &&
-    Number.isNaN(Date.parse(body.expirationDate))
-  ) {
-    details.push("expirationDate must be a valid date");
+  if (body.expirationDate !== undefined) {
+    if (body.expirationDate === null || body.expirationDate === "") {
+      details.push("expirationDate cannot be cleared because it is required");
+    } else if (Number.isNaN(Date.parse(body.expirationDate))) {
+      details.push("expirationDate must be a valid date");
+    }
   }
 
   if (details.length > 0) return next(fail(details));

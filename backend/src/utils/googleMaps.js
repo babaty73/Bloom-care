@@ -9,6 +9,24 @@ const GOOGLE_SHORT_HOSTS = new Set([
   "goo.gl",
 ]);
 
+// Production hardening fix: neither external call (Google short-link
+// expansion, Geoapify geocoding) previously had a timeout, so a hanging
+// upstream could hang pharmacy registration/update indefinitely. Both calls
+// below now abort after this many milliseconds; resolution stays
+// best-effort/non-blocking either way (the caller already treats any error
+// here as "location unresolved for now", not a hard failure).
+const EXTERNAL_FETCH_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), EXTERNAL_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function isValidLatitude(value) {
   return (
     typeof value === "number" &&
@@ -176,7 +194,7 @@ async function expandGoogleMapsUrl(link) {
   }
 
   try {
-    const response = await fetch(inputUrl.toString(), {
+    const response = await fetchWithTimeout(inputUrl.toString(), {
       method: "GET",
       redirect: "follow",
       headers: {
@@ -312,7 +330,7 @@ export async function resolvePharmacyLocation(
   let response;
 
   try {
-    response = await fetch(url.toString(), {
+    response = await fetchWithTimeout(url.toString(), {
       headers: {
         Accept: "application/json",
       },

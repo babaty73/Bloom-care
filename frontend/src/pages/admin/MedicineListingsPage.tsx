@@ -21,6 +21,7 @@ function MedicineListingsPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!medicineId.trim()) return;
+    if (!window.confirm("Remove this medicine listing? This cannot be undone.")) return;
     setIsSubmitting(true);
     setError(null);
     try {

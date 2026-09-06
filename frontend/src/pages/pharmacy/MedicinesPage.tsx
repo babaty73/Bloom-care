@@ -76,11 +76,15 @@ function MedicinesPage() {
       genericName: form.genericName,
       price: Number(form.price),
       quantity: Number(form.quantity),
+      // expirationDate is required (docs/IMPLEMENTATION_DECISIONS.md, Medicine
+      // model). Always included — never silently dropped when the form field
+      // happens to be empty; the "required" input attribute below stops that
+      // case from being submittable in the first place.
+      expirationDate: form.expirationDate,
     };
     if (form.brandName) payload.brandName = form.brandName;
     if (form.description) payload.description = form.description;
     if (form.category) payload.category = form.category;
-    if (form.expirationDate) payload.expirationDate = form.expirationDate;
     return payload;
   }
 
@@ -196,6 +200,7 @@ function MedicinesPage() {
             Expiration Date
             <input
               type="date"
+              required
               value={form.expirationDate}
               onChange={(e) => update("expirationDate", e.target.value)}
               className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"

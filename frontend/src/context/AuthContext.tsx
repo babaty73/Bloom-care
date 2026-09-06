@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getToken, setToken as persistToken, clearToken } from "../utils/api";
+import { getToken, setToken as persistToken, clearToken, getStoredRole, setStoredRole, clearStoredRole } from "../utils/api";
 import * as authService from "../services/auth.service";
 import type {
   AuthenticatedPharmacy,
@@ -12,7 +12,9 @@ import type {
 
 // Contract: docs/ARCHITECTURE.md Frontend token handling.
 // AuthContext owns authentication state; components must not read/write
-// bloomcare_token or role state directly.
+// bloomcare_token or role state directly. Role storage itself lives in
+// utils/api.ts (the shared API layer) so the session-expiry handling there can
+// read/clear it without a second, duplicate copy of this storage logic.
 
 interface AuthState {
   role: UserRole | null;
@@ -33,8 +35,6 @@ interface AuthContextValue extends AuthState {
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const ROLE_STORAGE_KEY = "bloomcare_role";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
   const [pharmacy, setPharmacy] = useState<AuthenticatedPharmacy | null>(null);
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // exists, but re-fetching the full profile is left to each protected page via
     // its own data-loading (loading/error/empty/success) handling.
     const token = getToken();
-    const storedRole = localStorage.getItem(ROLE_STORAGE_KEY) as UserRole | null;
+    const storedRole = getStoredRole() as UserRole | null;
     if (token && storedRole) {
       setRole(storedRole);
     }
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginPharmacy = useCallback(async (payload: PharmacyLoginPayload) => {
     const result = await authService.loginPharmacy(payload);
     persistToken(result.token);
-    localStorage.setItem(ROLE_STORAGE_KEY, "pharmacy");
+    setStoredRole("pharmacy");
     setRole("pharmacy");
     setPharmacy(result.pharmacy);
   }, []);
@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerPharmacy = useCallback(async (payload: PharmacyRegisterPayload) => {
     const result = await authService.registerPharmacy(payload);
     persistToken(result.token);
-    localStorage.setItem(ROLE_STORAGE_KEY, "pharmacy");
+    setStoredRole("pharmacy");
     setRole("pharmacy");
     setPharmacy(result.pharmacy);
   }, []);
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginAdmin = useCallback(async (payload: AdminLoginPayload) => {
     const result = await authService.loginAdmin(payload);
     persistToken(result.token);
-    localStorage.setItem(ROLE_STORAGE_KEY, "admin");
+    setStoredRole("admin");
     setRole("admin");
     setAdmin(result.admin);
   }, []);
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearToken();
-    localStorage.removeItem(ROLE_STORAGE_KEY);
+    clearStoredRole();
     setRole(null);
     setPharmacy(null);
     setAdmin(null);

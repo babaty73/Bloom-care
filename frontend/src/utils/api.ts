@@ -4,6 +4,7 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 const TOKEN_STORAGE_KEY = "bloomcare_token";
+const ROLE_STORAGE_KEY = "bloomcare_role";
 
 export interface ApiErrorShape {
   code: string;
@@ -48,6 +49,27 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
 }
 
+// Role storage lives here (the shared API layer) rather than in AuthContext, so
+// the session-expiry handling below can read/clear it without duplicating a
+// second copy of this storage logic in another file.
+export function getStoredRole(): string | null {
+  return localStorage.getItem(ROLE_STORAGE_KEY);
+}
+
+export function setStoredRole(role: string): void {
+  localStorage.setItem(ROLE_STORAGE_KEY, role);
+}
+
+export function clearStoredRole(): void {
+  localStorage.removeItem(ROLE_STORAGE_KEY);
+}
+
+function loginPathForRole(role: string | null): string {
+  if (role === "pharmacy") return "/pharmacy/login";
+  if (role === "admin") return "/admin/login";
+  return "/";
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE" | "PUT";
   body?: unknown;
@@ -83,6 +105,22 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   if (!response.ok || !json || json.success === false) {
     const errorJson = json as ApiErrorResponse | null;
+
+    // Session/token handling (shared here, not duplicated per page): a 401 on a
+    // request that attached a bearer token means that token is dead — expired,
+    // invalidated, or otherwise no longer accepted. This never fires for
+    // auth: false calls (public search/details/report, login/register itself),
+    // so a wrong-password login attempt is unaffected. A 403 (role/ownership
+    // mismatch) is a different, legitimate case and is NOT treated as session
+    // expiry here.
+    if (auth && response.status === 401) {
+      const activeRole = getStoredRole();
+      clearToken();
+      clearStoredRole();
+      const loginPath = loginPathForRole(activeRole);
+      window.location.href = `${loginPath}?sessionExpired=1`;
+    }
+
     throw new ApiRequestError(
       response.status,
       errorJson?.error?.code || "INTERNAL_SERVER_ERROR",

@@ -12,6 +12,8 @@ const STATUS_FILTERS: Array<PharmacyStatus | "ALL"> = ["ALL", "ACTIVE", "SUSPEND
 
 function PharmaciesPage() {
   const [filter, setFilter] = useState<PharmacyStatus | "ALL">("ALL");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [pharmacies, setPharmacies] = useState<AuthenticatedPharmacy[]>([]);
@@ -21,8 +23,9 @@ function PharmaciesPage() {
     setState("loading");
     setError(null);
     try {
-      const result = await adminService.listPharmacies(filter === "ALL" ? undefined : filter, 1, 50);
+      const result = await adminService.listPharmacies(filter === "ALL" ? undefined : filter, page, 50);
       setPharmacies(result.items);
+      setTotalPages(result.pagination.totalPages);
       setState("success");
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Failed to load pharmacies");
@@ -33,7 +36,12 @@ function PharmaciesPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, page]);
+
+  function handleFilterChange(value: PharmacyStatus | "ALL") {
+    setFilter(value);
+    setPage(1);
+  }
 
   async function handleStatusChange(id: string, status: PharmacyStatus) {
     setActionError(null);
@@ -46,6 +54,7 @@ function PharmaciesPage() {
   }
 
   async function handleDelete(id: string) {
+    if (!window.confirm("Permanently remove this pharmacy? This cannot be undone.")) return;
     setActionError(null);
     try {
       await adminService.deletePharmacy(id);
@@ -64,7 +73,7 @@ function PharmaciesPage() {
           <button
             key={value}
             type="button"
-            onClick={() => setFilter(value)}
+            onClick={() => handleFilterChange(value)}
             className={`rounded-md px-3 py-1.5 font-medium ${
               filter === value ? "bg-emerald-600 text-white" : "border border-gray-300 text-gray-700 hover:bg-gray-50"
             }`}
@@ -141,6 +150,30 @@ function PharmaciesPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {state === "success" && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 text-sm">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-gray-600">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
       )}
     </div>
   );

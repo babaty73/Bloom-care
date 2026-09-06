@@ -19,6 +19,8 @@ const STATUS_FILTERS: Array<AdminReportStatus | "ALL"> = ["ALL", "PENDING", "RES
 
 function ReportsPage() {
   const [filter, setFilter] = useState<AdminReportStatus | "ALL">("PENDING");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [reports, setReports] = useState<AdminReport[]>([]);
@@ -29,8 +31,9 @@ function ReportsPage() {
     setState("loading");
     setError(null);
     try {
-      const result = await adminService.listReports(filter === "ALL" ? {} : { status: filter }, 1, 50);
+      const result = await adminService.listReports(filter === "ALL" ? {} : { status: filter }, page, 50);
       setReports(result.items);
+      setTotalPages(result.pagination.totalPages);
       setState("success");
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Failed to load reports");
@@ -41,7 +44,12 @@ function ReportsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, page]);
+
+  function handleFilterChange(value: AdminReportStatus | "ALL") {
+    setFilter(value);
+    setPage(1);
+  }
 
   async function handleReview(id: string, status: "RESOLVED" | "REJECTED") {
     setActionError(null);
@@ -54,6 +62,7 @@ function ReportsPage() {
   }
 
   async function handleRemoveMedicine(medicineId: string) {
+    if (!window.confirm("Remove this medicine listing? This cannot be undone.")) return;
     setActionError(null);
     try {
       await adminService.deleteMedicine(medicineId);
@@ -72,7 +81,7 @@ function ReportsPage() {
           <button
             key={value}
             type="button"
-            onClick={() => setFilter(value)}
+            onClick={() => handleFilterChange(value)}
             className={`rounded-md px-3 py-1.5 font-medium ${
               filter === value ? "bg-emerald-600 text-white" : "border border-gray-300 text-gray-700 hover:bg-gray-50"
             }`}
@@ -141,6 +150,30 @@ function ReportsPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {state === "success" && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 text-sm">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-gray-600">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
       )}
     </div>
   );

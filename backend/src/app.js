@@ -11,6 +11,13 @@ import config from "./config/env.js";
 
 const app = express();
 
+// Required for correct client-IP detection behind a single reverse proxy hop
+// (Render's load balancer). Without this, express-rate-limit (added below)
+// cannot safely determine the real client IP from X-Forwarded-For and refuses
+// to run — trust proxy: 1 trusts exactly one hop, not an attacker-supplied
+// chain, which is the standard safe setting for this deployment shape.
+app.set("trust proxy", 1);
+
 // CORS_ORIGIN env var (see .env.example); defaults to the local Vite dev
 // server so local development keeps working unconfigured.
 app.use(cors({

@@ -45,6 +45,23 @@ export function errorMiddleware(err, req, res, next) {
     });
   }
 
+  // Body-parser errors (malformed JSON, oversized request body) arrive as
+  // plain http-errors-shaped objects, not our ApiError. These are routine,
+  // expected client-caused conditions (a typo'd request body, a client bug),
+  // not application bugs — handle them cleanly rather than falling through to
+  // the generic 500 + stack-trace log below, which would both mislabel the
+  // response (client error, not server error) and add noise that could bury
+  // genuine unexpected errors in production logs.
+  if (typeof err.type === "string" && err.type.startsWith("entity.")) {
+    const isTooLarge = err.status === 413 || err.statusCode === 413;
+    return sendError(res, {
+      statusCode: isTooLarge ? 413 : 400,
+      code: isTooLarge ? "PAYLOAD_TOO_LARGE" : "VALIDATION_ERROR",
+      message: isTooLarge ? "Request body is too large" : "Request body could not be parsed as JSON",
+      details: [],
+    });
+  }
+
   console.error(err);
 
   return sendError(res, {

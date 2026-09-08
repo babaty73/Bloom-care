@@ -44,13 +44,16 @@ export async function createMedicineForPharmacy(pharmacyId, data) {
   // Decision #4) and is now enforced by validateMedicineCreate before this
   // service function is ever called — passed through as-is rather than
   // silently substituting null on omission.
+  // description/category are now required (docs/ARCHITECTURE.md §1.3) and
+  // enforced by validateMedicineCreate before this function is ever called —
+  // passed through as-is, same pattern as expirationDate below.
   const medicine = await Medicine.create({
     pharmacyId,
     medicineName,
     genericName,
     brandName: brandName ?? null,
-    description: description ?? null,
-    category: category ?? null,
+    description,
+    category,
     price,
     quantity,
     inStock: computeInStock(quantity),

@@ -30,16 +30,20 @@ const medicineSchema = new mongoose.Schema(
       default: null,
     },
     description: {
+      // Contract: docs/ARCHITECTURE.md §1.3 — "Must contain the medicine
+      // description required by the specification." Required (this was
+      // previously required: false, contradicting the documented contract —
+      // production-readiness audit finding, fixed here).
       type: String,
-      required: false,
+      required: [true, "description is required"],
       trim: true,
-      default: null,
     },
     category: {
+      // Contract: docs/ARCHITECTURE.md §1.3 — "Must be non-empty." Required
+      // (same fix as description above).
       type: String,
-      required: false,
+      required: [true, "category is required"],
       trim: true,
-      default: null,
     },
     price: {
       type: Number,

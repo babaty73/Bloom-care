@@ -110,11 +110,26 @@ export function validatePharmacyProfileUpdate(req, res, next) {
 }
 
 export function validateMedicineCreate(req, res, next) {
-  const { medicineName, genericName, price, quantity, expirationDate } = req.body || {};
+  const { medicineName, genericName, description, category, price, quantity, expirationDate } = req.body || {};
   const details = [];
 
-  if (!medicineName || typeof medicineName !== "string") details.push("medicineName is required");
-  if (!genericName || typeof genericName !== "string") details.push("genericName is required");
+  // .trim() === "" catches whitespace-only strings, which the previous
+  // `!medicineName`-style check let through (falsy check alone only rejects
+  // "", not "   ") — production-readiness audit finding, fixed here.
+  if (!medicineName || typeof medicineName !== "string" || medicineName.trim() === "") {
+    details.push("medicineName is required");
+  }
+  if (!genericName || typeof genericName !== "string" || genericName.trim() === "") {
+    details.push("genericName is required");
+  }
+  // description/category are required per docs/ARCHITECTURE.md §1.3 (see
+  // Medicine.js schema comment for the same fix, applied together).
+  if (!description || typeof description !== "string" || description.trim() === "") {
+    details.push("description is required");
+  }
+  if (!category || typeof category !== "string" || category.trim() === "") {
+    details.push("category is required");
+  }
   if (typeof price !== "number" || Number.isNaN(price) || price < 0) details.push("price must be a non-negative number");
   if (typeof quantity !== "number" || Number.isNaN(quantity) || quantity < 0 || !Number.isInteger(quantity)) {
     details.push("quantity must be a non-negative integer");
@@ -150,6 +165,19 @@ export function validateMedicineUpdate(req, res, next) {
   for (const field of providedFields) {
     if (!allowedFields.includes(field)) {
       details.push(`${field} is not an editable field`);
+    }
+  }
+
+  // Required fields: if provided in a partial update, they must not be
+  // cleared to empty/null (previously unchecked — a PATCH could silently
+  // blank out medicineName/genericName/description/category since Mongoose's
+  // own `required` validator treats "" as present, not missing — production-
+  // readiness audit finding, fixed here).
+  for (const field of ["medicineName", "genericName", "description", "category"]) {
+    if (body[field] !== undefined) {
+      if (typeof body[field] !== "string" || body[field].trim() === "") {
+        details.push(`${field} cannot be cleared because it is required`);
+      }
     }
   }
 

@@ -5,7 +5,7 @@ import type { PublicMedicineResult } from "../../types/medicine.types";
 import Loading from "../../components/common/Loading";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { ApiRequestError } from "../../utils/api";
-import { formatRelativeTime } from "../../utils/date";
+import { formatRelativeTime, formatExpirationDate } from "../../utils/date";
 import { formatOpenStatusLabel } from "../../utils/pharmacyStatus";
 
 type LoadState = "loading" | "error" | "success";
@@ -199,6 +199,7 @@ function MedicineSearchPage() {
 
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                   <span>Updated {formatRelativeTime(item.lastUpdated)}</span>
+                  {item.expirationDate && <span>Expires {formatExpirationDate(item.expirationDate)}</span>}
                   {item.pharmacy && (
                     <span className={item.pharmacy.isOpen ? "text-emerald-600" : "text-red-600"}>
                       {formatOpenStatusLabel(item.pharmacy.isOpen, item.pharmacy.openingTime, item.pharmacy.closingTime)}

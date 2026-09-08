@@ -23,11 +23,15 @@ export interface MedicineCreatePayload {
   medicineName: string;
   genericName: string;
   brandName?: string;
-  description?: string;
-  category?: string;
+  // description/category/expirationDate are required per
+  // docs/ARCHITECTURE.md §1.3 — reflected here for compile-time safety.
+  // (MedicineUpdatePayload below stays Partial<...>, so PATCH calls can still
+  // omit fields they aren't changing.)
+  description: string;
+  category: string;
   price: number;
   quantity: number;
-  expirationDate?: string;
+  expirationDate: string;
 }
 
 export type MedicineUpdatePayload = Partial<MedicineCreatePayload>;

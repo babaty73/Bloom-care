@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import * as pharmacyService from "../../services/pharmacy.service";
 import { useAuth } from "../../hooks/useAuth";
-import type { Pharmacy, PharmacyProfileUpdatePayload } from "../../types/pharmacy.types";
+import type { OwnPharmacyProfile, PharmacyProfileUpdatePayload } from "../../types/pharmacy.types";
 import Loading from "../../components/common/Loading";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { ApiRequestError } from "../../utils/api";
@@ -12,7 +12,7 @@ function ProfilePage() {
   const { updatePharmacyState } = useAuth();
 
   const [state, setState] = useState<LoadState>("loading");
-  const [pharmacy, setPharmacy] = useState<Pharmacy | null>(null);
+  const [pharmacy, setPharmacy] = useState<OwnPharmacyProfile | null>(null);
   const [form, setForm] = useState<PharmacyProfileUpdatePayload>({});
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -76,6 +76,14 @@ function ProfilePage() {
       {successMessage && (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {successMessage}
+        </div>
+      )}
+      {pharmacy.locationResolved === false && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          We couldn&apos;t pin your pharmacy&apos;s location from that Google Maps link, so you won&apos;t appear in
+          &quot;nearby pharmacy&quot; results yet. Everything else — search, your listing, directions from your
+          link — still works normally. Double-check the link below (an address search or place link works best) and
+          save again to retry.
         </div>
       )}
 

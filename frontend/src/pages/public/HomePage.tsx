@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function HomePage() {
   const [query, setQuery] = useState("");
@@ -25,7 +25,6 @@ function HomePage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search medicine name or generic name..."
-          aria-label="Search medicine name or generic name"
           className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-sm focus:border-emerald-500 focus:outline-none"
         />
         <button
@@ -35,6 +34,14 @@ function HomePage() {
           Search
         </button>
       </form>
+
+      <p className="text-sm text-gray-500">
+        Are you a pharmacy?{" "}
+        <Link to="/pharmacy/register" className="font-medium text-emerald-700 hover:underline">
+          Register your pharmacy
+        </Link>{" "}
+        to list your inventory on Bloom-Care.
+      </p>
     </div>
   );
 }

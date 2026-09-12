@@ -4,6 +4,8 @@ import MedicineSearchPage from "../pages/public/MedicineSearchPage";
 import MedicineDetailsPage from "../pages/public/MedicineDetailsPage";
 import PharmacyDetailsPage from "../pages/public/PharmacyDetailsPage";
 import ReportPage from "../pages/public/ReportPage";
+import PrivacyPolicyPage from "../pages/public/PrivacyPolicyPage";
+import TermsPage from "../pages/public/TermsPage";
 
 // Public visitor routes — no authentication. Contract: docs/ARCHITECTURE.md
 // Public visitor experience (search, medicine/pharmacy details, report entry point).
@@ -14,5 +16,7 @@ export function publicRoutes() {
     <Route key="medicine-details" path="/medicines/:id" element={<MedicineDetailsPage />} />,
     <Route key="pharmacy-details" path="/pharmacies/:id" element={<PharmacyDetailsPage />} />,
     <Route key="report" path="/report" element={<ReportPage />} />,
+    <Route key="privacy" path="/privacy" element={<PrivacyPolicyPage />} />,
+    <Route key="terms" path="/terms" element={<TermsPage />} />,
   ];
 }

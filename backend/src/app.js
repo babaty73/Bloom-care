@@ -19,7 +19,9 @@ const app = express();
 app.set("trust proxy", 1);
 
 // CORS_ORIGIN env var (see .env.example); defaults to the local Vite dev
-// server so local development keeps working unconfigured.
+// server so local development keeps working unconfigured. Always an array
+// (config/env.js normalizes a single value into a one-element array), which
+// the cors package matches against exactly.
 app.use(cors({
   origin: config.corsOrigin,
 }));

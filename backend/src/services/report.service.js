@@ -63,7 +63,23 @@ export async function listReportsForPharmacy(pharmacyId, { page, limit }) {
   };
 }
 
-/** Admin view across all reports, with optional filters. Contract: ARCHITECTURE.md §2.4. */
+/**
+ * Admin view across all reports, with optional filters. Contract: ARCHITECTURE.md §2.4.
+ *
+ * Populates medicineId -> { medicineName, genericName } and pharmacyId ->
+ * { pharmacyName } so the admin UI can show real names instead of raw
+ * ObjectIds (a genuine admin-moderation usability requirement — the spec's
+ * "Review reports" responsibility isn't meaningfully actionable from opaque
+ * IDs alone). This deliberately does NOT touch listReportsForPharmacy below,
+ * which is a different domain's page. No schema change was needed: the
+ * `ref` was already declared on both fields in models/Report.js.
+ *
+ * Population fetches the referenced document directly by ID, bypassing the
+ * public-visibility filters (expiration/pharmacy-status) that apply to
+ * visitor-facing search/details — intentional, since an admin reviewing a
+ * report about an expired medicine or a since-banned pharmacy still needs to
+ * see its name, not a 404-shaped gap.
+ */
 export async function listReportsForAdmin({ status, pharmacyId, medicineId }, { page, limit }) {
   const filter = {};
   if (status) filter.status = status;
@@ -73,7 +89,12 @@ export async function listReportsForAdmin({ status, pharmacyId, medicineId }, { 
   const skip = (page - 1) * limit;
 
   const [items, total] = await Promise.all([
-    Report.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Report.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("medicineId", "medicineName genericName")
+      .populate("pharmacyId", "pharmacyName"),
     Report.countDocuments(filter),
   ]);
 
@@ -86,6 +107,10 @@ export async function listReportsForAdmin({ status, pharmacyId, medicineId }, { 
 /**
  * Admin report-review decision. Contract: Report Decisions §3-§4 — only
  * PENDING → RESOLVED and PENDING → REJECTED are valid transitions.
+ *
+ * Re-populates the same display fields as listReportsForAdmin above so the
+ * admin UI can update its local copy of this report in place (after a
+ * review action) without losing the resolved medicine/pharmacy names.
  */
 export async function updateReportStatus(reportId, nextStatus) {
   const report = await Report.findById(reportId);
@@ -100,6 +125,10 @@ export async function updateReportStatus(reportId, nextStatus) {
 
   report.status = nextStatus;
   await report.save();
+  await report.populate([
+    { path: "medicineId", select: "medicineName genericName" },
+    { path: "pharmacyId", select: "pharmacyName" },
+  ]);
   return report;
 }
 

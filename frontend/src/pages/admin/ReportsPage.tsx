@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import * as adminService from "../../services/admin.service";
-import type { AdminReport, AdminReportStatus } from "../../types/admin.types";
+import type { AdminReportListItem, AdminReportStatus } from "../../types/admin.types";
 import { REPORT_REASON_LABELS } from "../../types/report.types";
 import Loading from "../../components/common/Loading";
 import ErrorMessage from "../../components/common/ErrorMessage";
@@ -8,7 +8,7 @@ import { ApiRequestError } from "../../utils/api";
 
 // NOTE: there is no GET /api/admin/medicines listing endpoint in the documented
 // API contract, so this page offers "Remove Medicine Listing" using the
-// medicineId already present on each report (the spec's own admin workflow:
+// medicine id already present on each report (the spec's own admin workflow:
 // review a report, then optionally remove the listing it concerns). A separate
 // browsable medicine-moderation list isn't possible without inventing an
 // undocumented endpoint — see admin/MedicineListingsPage.tsx.
@@ -23,7 +23,7 @@ function ReportsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [state, setState] = useState<LoadState>("loading");
   const [error, setError] = useState<string | null>(null);
-  const [reports, setReports] = useState<AdminReport[]>([]);
+  const [reports, setReports] = useState<AdminReportListItem[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
   const [removedMedicineIds, setRemovedMedicineIds] = useState<Set<string>>(new Set());
 
@@ -101,11 +101,12 @@ function ReportsPage() {
           {reports.map((report) => (
             <li key={report._id} className="rounded-lg border border-gray-200 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="break-words font-semibold text-gray-900">{REPORT_REASON_LABELS[report.reason]}</p>
-                  {report.additionalComment && <p className="mt-1 break-words text-sm text-gray-600">{report.additionalComment}</p>}
-                  <p className="mt-1 break-words text-xs text-gray-400">
-                    Medicine: {report.medicineId} · Pharmacy: {report.pharmacyId}
+                <div>
+                  <p className="font-semibold text-gray-900">{REPORT_REASON_LABELS[report.reason]}</p>
+                  {report.additionalComment && <p className="mt-1 text-sm text-gray-600">{report.additionalComment}</p>}
+                  <p className="mt-1 text-xs text-gray-400">
+                    Medicine: {report.medicine ? report.medicine.medicineName : "Listing no longer exists"} · Pharmacy:{" "}
+                    {report.pharmacy ? report.pharmacy.pharmacyName : "Pharmacy no longer exists"}
                   </p>
                 </div>
                 <span
@@ -137,14 +138,16 @@ function ReportsPage() {
                   >
                     Reject
                   </button>
-                  <button
-                    type="button"
-                    disabled={removedMedicineIds.has(report.medicineId)}
-                    onClick={() => handleRemoveMedicine(report.medicineId)}
-                    className="rounded-md border border-red-300 px-3 py-1.5 text-red-700 hover:bg-red-50 disabled:opacity-40"
-                  >
-                    {removedMedicineIds.has(report.medicineId) ? "Listing Removed" : "Remove Medicine Listing"}
-                  </button>
+                  {report.medicine && (
+                    <button
+                      type="button"
+                      disabled={removedMedicineIds.has(report.medicine._id)}
+                      onClick={() => handleRemoveMedicine(report.medicine!._id)}
+                      className="rounded-md border border-red-300 px-3 py-1.5 text-red-700 hover:bg-red-50 disabled:opacity-40"
+                    >
+                      {removedMedicineIds.has(report.medicine._id) ? "Listing Removed" : "Remove Medicine Listing"}
+                    </button>
+                  )}
                 </div>
               )}
             </li>

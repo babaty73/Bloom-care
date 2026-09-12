@@ -4,8 +4,8 @@ import type {
   AdminDashboardStats,
   PaginatedPharmacies,
   PharmacyStatus,
-  AdminReport,
-  PaginatedAdminReports,
+  AdminReportListItem,
+  PaginatedAdminReportListItems,
   AdminReportFilters,
 } from "../types/admin.types";
 
@@ -40,9 +40,9 @@ export function listReports(filters: AdminReportFilters = {}, page = 1, limit = 
   if (filters.medicineId) query.set("medicineId", filters.medicineId);
   query.set("page", String(page));
   query.set("limit", String(limit));
-  return apiRequest<PaginatedAdminReports>(`/admin/reports?${query.toString()}`);
+  return apiRequest<PaginatedAdminReportListItems>(`/admin/reports?${query.toString()}`);
 }
 
 export function reviewReport(id: string, status: "RESOLVED" | "REJECTED") {
-  return apiRequest<AdminReport>(`/admin/reports/${id}`, { method: "PATCH", body: { status } });
+  return apiRequest<AdminReportListItem>(`/admin/reports/${id}`, { method: "PATCH", body: { status } });
 }

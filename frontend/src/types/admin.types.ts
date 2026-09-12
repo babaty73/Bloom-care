@@ -18,6 +18,8 @@ export interface PaginatedPharmacies {
 
 export type AdminReportStatus = "PENDING" | "RESOLVED" | "REJECTED";
 
+// Describes GET /api/pharmacies/me/reports (pharmacy's own report view,
+// Domain 2 — not modified here). Kept exactly as before.
 export interface AdminReport {
   _id: string;
   medicineId: string;
@@ -30,6 +32,25 @@ export interface AdminReport {
 
 export interface PaginatedAdminReports {
   items: AdminReport[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+// Describes GET/PATCH /api/admin/reports (admin-only). This endpoint now
+// populates medicine/pharmacy display names server-side (report.service.js
+// listReportsForAdmin/updateReportStatus) instead of returning raw ObjectIds —
+// null means the referenced medicine/pharmacy no longer exists (deleted).
+export interface AdminReportListItem {
+  _id: string;
+  medicine: { _id: string; medicineName: string; genericName: string } | null;
+  pharmacy: { _id: string; pharmacyName: string } | null;
+  reason: ReportReason;
+  additionalComment: string | null;
+  status: AdminReportStatus;
+  createdAt: string;
+}
+
+export interface PaginatedAdminReportListItems {
+  items: AdminReportListItem[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 

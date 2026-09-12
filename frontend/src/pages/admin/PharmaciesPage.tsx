@@ -43,7 +43,8 @@ function PharmaciesPage() {
     setPage(1);
   }
 
-  async function handleStatusChange(id: string, status: PharmacyStatus) {
+  async function handleStatusChange(id: string, status: PharmacyStatus, confirmMessage?: string) {
+    if (confirmMessage && !window.confirm(confirmMessage)) return;
     setActionError(null);
     try {
       const updated = await adminService.updatePharmacyStatus(id, status);
@@ -93,13 +94,13 @@ function PharmaciesPage() {
           {pharmacies.map((pharmacy) => (
             <li key={pharmacy._id} className="rounded-lg border border-gray-200 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="break-words font-semibold text-gray-900">{pharmacy.pharmacyName}</p>
-                  <p className="break-words text-sm text-gray-500">{pharmacy.email}</p>
-                  <p className="break-words text-sm text-gray-500">{pharmacy.address}</p>
+                <div>
+                  <p className="font-semibold text-gray-900">{pharmacy.pharmacyName}</p>
+                  <p className="text-sm text-gray-500">{pharmacy.email}</p>
+                  <p className="text-sm text-gray-500">{pharmacy.address}</p>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                     pharmacy.status === "ACTIVE"
                       ? "bg-emerald-100 text-emerald-700"
                       : pharmacy.status === "SUSPENDED"
@@ -124,7 +125,13 @@ function PharmaciesPage() {
                 {pharmacy.status !== "SUSPENDED" && (
                   <button
                     type="button"
-                    onClick={() => handleStatusChange(pharmacy._id, "SUSPENDED")}
+                    onClick={() =>
+                      handleStatusChange(
+                        pharmacy._id,
+                        "SUSPENDED",
+                        `Suspend ${pharmacy.pharmacyName}? They will lose access to their account and disappear from visitor search until reactivated.`,
+                      )
+                    }
                     className="rounded-md border border-amber-300 px-3 py-1.5 text-amber-700 hover:bg-amber-50"
                   >
                     Suspend
@@ -133,7 +140,13 @@ function PharmaciesPage() {
                 {pharmacy.status !== "BANNED" && (
                   <button
                     type="button"
-                    onClick={() => handleStatusChange(pharmacy._id, "BANNED")}
+                    onClick={() =>
+                      handleStatusChange(
+                        pharmacy._id,
+                        "BANNED",
+                        `Ban ${pharmacy.pharmacyName}? They will lose access to their account and disappear from visitor search until reactivated.`,
+                      )
+                    }
                     className="rounded-md border border-red-300 px-3 py-1.5 text-red-700 hover:bg-red-50"
                   >
                     Ban

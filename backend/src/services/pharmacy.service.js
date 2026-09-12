@@ -45,7 +45,12 @@ export async function getOwnProfile(pharmacyId) {
   if (!pharmacy) {
     throw new ApiError(404, "RESOURCE_NOT_FOUND", "Pharmacy not found");
   }
-  return toPublicPharmacy(pharmacy);
+  // Location-resolution feedback (Nearby Pharmacy / Distance decision — flagged
+  // as needing developer confirmation, now resolved: add a boolean indicator
+  // rather than exposing raw coordinates or changing resolution's non-blocking
+  // nature). Read from the original doc before toPublicPharmacy() strips
+  // `location` from its returned copy.
+  return { ...toPublicPharmacy(pharmacy), locationResolved: pharmacy.location !== null };
 }
 
 export async function updateOwnProfile(pharmacyId, updates) {
@@ -75,7 +80,7 @@ export async function updateOwnProfile(pharmacyId, updates) {
   }
 
   await pharmacy.save();
-  return toPublicPharmacy(pharmacy);
+  return { ...toPublicPharmacy(pharmacy), locationResolved: pharmacy.location !== null };
 }
 
 export async function getOwnDashboard(pharmacyId) {

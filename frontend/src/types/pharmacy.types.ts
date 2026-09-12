@@ -7,6 +7,14 @@ export type Pharmacy = AuthenticatedPharmacy;
 // pharmacy's own private profile (Pharmacy, above).
 export type PublicPharmacyProfile = Omit<Pharmacy, "email">;
 
+// Nearby Pharmacy / Distance decision — location-resolution feedback (Domain 4).
+// Only the pharmacy's own profile views (GET/PATCH /pharmacies/me) include this
+// boolean; it is never present on the public/visitor-facing PublicPharmacyProfile,
+// and raw coordinates are never exposed anywhere in the API.
+export interface OwnPharmacyProfile extends Pharmacy {
+  locationResolved: boolean;
+}
+
 export interface PharmacyProfileUpdatePayload {
   pharmacyName?: string;
   address?: string;

@@ -65,7 +65,12 @@ export async function registerPharmacy({
 
   const token = signToken({ sub: pharmacy._id.toString(), role: "pharmacy" });
 
-  return { token, pharmacy: toPublicPharmacy(pharmacy) };
+  // Location-resolution feedback (Domain 4): included for response symmetry
+  // with GET/PATCH /pharmacies/me, which now carry the same field. Frontend
+  // registration currently redirects immediately on success rather than
+  // rendering this — the durable feedback surface is the profile page, which
+  // the pharmacy can revisit any time to check current resolution status.
+  return { token, pharmacy: { ...toPublicPharmacy(pharmacy), locationResolved: pharmacy.location !== null } };
 }
 
 export async function loginPharmacy({ email, password }) {

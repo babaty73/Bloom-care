@@ -52,11 +52,11 @@ function PharmacyDetailsPage() {
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-10">
       <div className="flex items-center gap-4">
         {pharmacy.logo && (
-          <img src={pharmacy.logo} alt="" className="h-14 w-14 rounded-full object-cover" />
+          <img src={pharmacy.logo} alt="" className="h-14 w-14 shrink-0 rounded-full object-cover" />
         )}
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{pharmacy.pharmacyName}</h1>
-          <p className="text-gray-500">{pharmacy.address}</p>
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-semibold text-gray-900">{pharmacy.pharmacyName}</h1>
+          <p className="break-words text-gray-500">{pharmacy.address}</p>
         </div>
       </div>
 

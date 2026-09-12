@@ -25,6 +25,7 @@ function HomePage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search medicine name or generic name..."
+          aria-label="Search medicine name or generic name"
           className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-sm focus:border-emerald-500 focus:outline-none"
         />
         <button

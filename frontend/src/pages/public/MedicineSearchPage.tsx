@@ -118,6 +118,7 @@ function MedicineSearchPage() {
           value={queryInput}
           onChange={(e) => setQueryInput(e.target.value)}
           placeholder="Search medicine name or generic name..."
+          aria-label="Search medicine name or generic name"
           className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-sm focus:border-emerald-500 focus:outline-none"
         />
         <button
@@ -175,13 +176,13 @@ function MedicineSearchPage() {
             {items.map((item) => (
               <li key={item._id} className="rounded-lg border border-gray-200 p-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <Link to={`/medicines/${item._id}`} className="font-semibold text-gray-900 hover:text-emerald-700">
+                  <div className="min-w-0">
+                    <Link to={`/medicines/${item._id}`} className="break-words font-semibold text-gray-900 hover:text-emerald-700">
                       {item.medicineName}
                     </Link>
-                    <p className="text-sm text-gray-500">{item.genericName}</p>
+                    <p className="break-words text-sm text-gray-500">{item.genericName}</p>
                     {item.pharmacy && (
-                      <Link to={`/pharmacies/${item.pharmacy._id}`} className="text-sm text-emerald-700 hover:underline">
+                      <Link to={`/pharmacies/${item.pharmacy._id}`} className="break-words text-sm text-emerald-700 hover:underline">
                         {item.pharmacy.pharmacyName}
                       </Link>
                     )}
@@ -189,7 +190,7 @@ function MedicineSearchPage() {
                       <span className="ml-2 text-xs font-medium text-gray-500">{item.distanceKm} km away</span>
                     )}
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <p className="text-lg font-semibold text-gray-900">{item.price} ETB</p>
                     <p className={item.inStock ? "text-sm text-emerald-600" : "text-sm text-red-600"}>
                       {item.inStock ? `In Stock (${item.quantity})` : "Out of Stock"}

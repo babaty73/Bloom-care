@@ -70,9 +70,9 @@ function DashboardPage() {
         ) : (
           <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200">
             {dashboard.recentlyUpdated.map((medicine) => (
-              <li key={medicine._id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="font-medium text-gray-900">{medicine.medicineName}</span>
-                <span className={medicine.inStock ? "text-emerald-600" : "text-red-600"}>
+              <li key={medicine._id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                <span className="min-w-0 break-words font-medium text-gray-900">{medicine.medicineName}</span>
+                <span className={`shrink-0 ${medicine.inStock ? "text-emerald-600" : "text-red-600"}`}>
                   {medicine.inStock ? `In Stock (${medicine.quantity})` : "Out of Stock"}
                 </span>
               </li>

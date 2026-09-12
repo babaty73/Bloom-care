@@ -93,13 +93,13 @@ function PharmaciesPage() {
           {pharmacies.map((pharmacy) => (
             <li key={pharmacy._id} className="rounded-lg border border-gray-200 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-gray-900">{pharmacy.pharmacyName}</p>
-                  <p className="text-sm text-gray-500">{pharmacy.email}</p>
-                  <p className="text-sm text-gray-500">{pharmacy.address}</p>
+                <div className="min-w-0">
+                  <p className="break-words font-semibold text-gray-900">{pharmacy.pharmacyName}</p>
+                  <p className="break-words text-sm text-gray-500">{pharmacy.email}</p>
+                  <p className="break-words text-sm text-gray-500">{pharmacy.address}</p>
                 </div>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     pharmacy.status === "ACTIVE"
                       ? "bg-emerald-100 text-emerald-700"
                       : pharmacy.status === "SUSPENDED"

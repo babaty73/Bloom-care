@@ -83,6 +83,8 @@ function Navbar() {
           type="button"
           className="text-2xl text-gray-700 sm:hidden"
           aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMobileMenuOpen}
+          aria-controls="mobile-nav-menu"
           onClick={() => setIsMobileMenuOpen((open) => !open)}
         >
           {isMobileMenuOpen ? <HiX /> : <HiMenu />}
@@ -91,7 +93,10 @@ function Navbar() {
 
       {/* Mobile nav panel */}
       {isMobileMenuOpen && (
-        <nav className="flex flex-col gap-1 border-t border-gray-200 px-4 py-3 text-sm font-medium text-gray-600 sm:hidden">
+        <nav
+          id="mobile-nav-menu"
+          className="flex flex-col gap-1 border-t border-gray-200 px-4 py-3 text-sm font-medium text-gray-600 sm:hidden"
+        >
           <Link to="/search" className="rounded-md px-2 py-2 hover:bg-gray-50" onClick={closeMobileMenu}>
             Find Medicine
           </Link>
@@ -109,9 +114,7 @@ function Navbar() {
               Logout
             </button>
           )}
-          <div className="px-2 py-2">
-            <EmergencyCallButton />
-          </div>
+          <EmergencyCallButton />
         </nav>
       )}
     </header>

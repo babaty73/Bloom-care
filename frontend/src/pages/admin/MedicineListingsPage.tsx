@@ -54,6 +54,7 @@ function MedicineListingsPage() {
           value={medicineId}
           onChange={(e) => setMedicineId(e.target.value)}
           placeholder="Medicine listing ID"
+          aria-label="Medicine listing ID"
           className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
         />
         <button

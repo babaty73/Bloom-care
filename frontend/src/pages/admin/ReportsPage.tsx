@@ -101,10 +101,10 @@ function ReportsPage() {
           {reports.map((report) => (
             <li key={report._id} className="rounded-lg border border-gray-200 p-4">
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-semibold text-gray-900">{REPORT_REASON_LABELS[report.reason]}</p>
-                  {report.additionalComment && <p className="mt-1 text-sm text-gray-600">{report.additionalComment}</p>}
-                  <p className="mt-1 text-xs text-gray-400">
+                <div className="min-w-0">
+                  <p className="break-words font-semibold text-gray-900">{REPORT_REASON_LABELS[report.reason]}</p>
+                  {report.additionalComment && <p className="mt-1 break-words text-sm text-gray-600">{report.additionalComment}</p>}
+                  <p className="mt-1 break-words text-xs text-gray-400">
                     Medicine: {report.medicineId} · Pharmacy: {report.pharmacyId}
                   </p>
                 </div>

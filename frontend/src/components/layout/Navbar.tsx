@@ -21,6 +21,7 @@ function getRoleLinks(role: UserRole | null): NavLinkItem[] {
       { to: "/pharmacy/profile", label: "Profile" },
     ];
   }
+
   if (role === "admin") {
     return [
       { to: "/admin/dashboard", label: "Dashboard" },
@@ -29,10 +30,9 @@ function getRoleLinks(role: UserRole | null): NavLinkItem[] {
       { to: "/admin/medicines", label: "Medicines" },
     ];
   }
+
   return [
     { to: "/pharmacy/register", label: "Register Your Pharmacy" },
-    { to: "/pharmacy/login", label: "Pharmacy Login" },
-    { to: "/admin/login", label: "Admin Login" },
   ];
 }
 
@@ -57,7 +57,11 @@ function Navbar() {
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-        <Link to="/" className="text-lg font-semibold text-emerald-700" onClick={closeMobileMenu}>
+        <Link
+          to="/"
+          className="text-lg font-semibold text-emerald-700"
+          onClick={closeMobileMenu}
+        >
           Bloom-Care
         </Link>
 
@@ -66,16 +70,27 @@ function Navbar() {
           <Link to="/search" className="hover:text-emerald-700">
             Find Medicine
           </Link>
+
           {roleLinks.map((link) => (
-            <Link key={link.to} to={link.to} className="hover:text-emerald-700">
+            <Link
+              key={link.to}
+              to={link.to}
+              className="hover:text-emerald-700"
+            >
               {link.label}
             </Link>
           ))}
+
           {isAuthenticated && (
-            <button type="button" onClick={handleLogout} className="hover:text-emerald-700">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="hover:text-emerald-700"
+            >
               Logout
             </button>
           )}
+
           <EmergencyCallButton />
         </nav>
 
@@ -93,14 +108,25 @@ function Navbar() {
       {/* Mobile nav panel */}
       {isMobileMenuOpen && (
         <nav className="flex flex-col gap-1 border-t border-gray-200 px-4 py-3 text-sm font-medium text-gray-600 sm:hidden">
-          <Link to="/search" className="rounded-md px-2 py-2 hover:bg-gray-50" onClick={closeMobileMenu}>
+          <Link
+            to="/search"
+            className="rounded-md px-2 py-2 hover:bg-gray-50"
+            onClick={closeMobileMenu}
+          >
             Find Medicine
           </Link>
+
           {roleLinks.map((link) => (
-            <Link key={link.to} to={link.to} className="rounded-md px-2 py-2 hover:bg-gray-50" onClick={closeMobileMenu}>
+            <Link
+              key={link.to}
+              to={link.to}
+              className="rounded-md px-2 py-2 hover:bg-gray-50"
+              onClick={closeMobileMenu}
+            >
               {link.label}
             </Link>
           ))}
+
           {isAuthenticated && (
             <button
               type="button"
@@ -110,6 +136,7 @@ function Navbar() {
               Logout
             </button>
           )}
+
           <div className="px-2 py-2">
             <EmergencyCallButton />
           </div>

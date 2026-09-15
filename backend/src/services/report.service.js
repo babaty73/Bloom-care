@@ -46,14 +46,23 @@ export async function createReport({ medicineId, pharmacyId, reason, additionalC
   return report;
 }
 
-/** Pharmacy's own reports. Contract: Report Decisions §5 — pharmacies may view
- * reports concerning their own pharmacy/listings only. */
+/**
+ * Pharmacy's own reports. Contract: Report Decisions §5 — pharmacies may view
+ * reports concerning their own pharmacy/listings only.
+ *
+ * Populates medicineId -> { medicineName, genericName } for the same reason
+ * listReportsForAdmin does below: a raw ObjectId isn't actionable to a
+ * pharmacy employee reviewing reports about their own listings. pharmacyId
+ * is deliberately NOT populated here — every report on this page already
+ * belongs to the requesting pharmacy, so "Pharmacy: <own name>" would be
+ * redundant (unlike the admin view, which spans multiple pharmacies).
+ */
 export async function listReportsForPharmacy(pharmacyId, { page, limit }) {
   const filter = { pharmacyId };
   const skip = (page - 1) * limit;
 
   const [items, total] = await Promise.all([
-    Report.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Report.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("medicineId", "medicineName genericName"),
     Report.countDocuments(filter),
   ]);
 
@@ -108,23 +117,37 @@ export async function listReportsForAdmin({ status, pharmacyId, medicineId }, { 
  * Admin report-review decision. Contract: Report Decisions §3-§4 — only
  * PENDING → RESOLVED and PENDING → REJECTED are valid transitions.
  *
- * Re-populates the same display fields as listReportsForAdmin above so the
- * admin UI can update its local copy of this report in place (after a
- * review action) without losing the resolved medicine/pharmacy names.
+ * Uses an atomic findOneAndUpdate (status: "PENDING" in the filter, not just
+ * checked after a separate read) rather than find-then-check-then-save.
+ * The previous read-then-write pattern had a real race: two concurrent
+ * requests against the same PENDING report (a double-click, or two admins)
+ * could both pass the "is it still PENDING" check before either wrote,
+ * letting the second .save() silently overwrite the first's decision with no
+ * error to either caller. The atomic form lets MongoDB serialize the two
+ * writes: only the one that still finds status: "PENDING" at write time
+ * succeeds; the other gets a clean, correct "not PENDING anymore" error
+ * instead of silently losing its own decision.
+ *
+ * Re-populates the same display fields as listReportsForAdmin so the admin UI
+ * can update its local copy of this report in place after a review action.
  */
 export async function updateReportStatus(reportId, nextStatus) {
-  const report = await Report.findById(reportId);
+  const report = await Report.findOneAndUpdate(
+    { _id: reportId, status: "PENDING" },
+    { status: nextStatus },
+    { new: true },
+  );
+
   if (!report) {
-    throw new ApiError(404, "RESOURCE_NOT_FOUND", "Report not found");
-  }
-  if (report.status !== "PENDING") {
+    const exists = await Report.exists({ _id: reportId });
+    if (!exists) {
+      throw new ApiError(404, "RESOURCE_NOT_FOUND", "Report not found");
+    }
     throw new ApiError(400, "VALIDATION_ERROR", "Only a PENDING report can be resolved or rejected", [
-      `current status is ${report.status}`,
+      "report is no longer PENDING (already reviewed, possibly by a concurrent request)",
     ]);
   }
 
-  report.status = nextStatus;
-  await report.save();
   await report.populate([
     { path: "medicineId", select: "medicineName genericName" },
     { path: "pharmacyId", select: "pharmacyName" },

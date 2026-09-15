@@ -10,16 +10,19 @@ const pharmacySchema = new mongoose.Schema(
       type: String,
       required: [true, "pharmacyName is required"],
       trim: true,
+      maxlength: [200, "pharmacyName must be at most 200 characters"],
     },
     address: {
       type: String,
       required: [true, "address is required"],
       trim: true,
+      maxlength: [300, "address must be at most 300 characters"],
     },
     phone: {
       type: String,
       required: [true, "phone is required"],
       trim: true,
+      maxlength: [30, "phone must be at most 30 characters"],
     },
     email: {
       type: String,
@@ -38,6 +41,10 @@ const pharmacySchema = new mongoose.Schema(
       type: String,
       required: [true, "googleMapsLink is required"],
       trim: true,
+      // Real Google Maps URLs (even unshortened, query-heavy ones) are well
+      // under this; bounds unbounded/abusive input rather than constraining
+      // legitimate links.
+      maxlength: [2000, "googleMapsLink must be at most 2000 characters"],
     },
     openingTime: {
       type: String,

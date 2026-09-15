@@ -34,10 +34,14 @@ export function validatePharmacyRegister(req, res, next) {
   const details = [];
 
   if (!pharmacyName || typeof pharmacyName !== "string") details.push("pharmacyName is required");
+  else if (pharmacyName.length > 200) details.push("pharmacyName must be at most 200 characters");
   if (!address || typeof address !== "string") details.push("address is required");
+  else if (address.length > 300) details.push("address must be at most 300 characters");
   if (!phone || typeof phone !== "string") details.push("phone is required");
+  else if (phone.length > 30) details.push("phone must be at most 30 characters");
   if (!email || typeof email !== "string" || !EMAIL_RE.test(email)) details.push("a valid email is required");
   if (!googleMapsLink || typeof googleMapsLink !== "string") details.push("googleMapsLink is required");
+  else if (googleMapsLink.length > 2000) details.push("googleMapsLink must be at most 2000 characters");
   if (!openingTime || !TIME_RE.test(openingTime)) details.push("openingTime must be in HH:mm 24-hour format");
   if (!closingTime || !TIME_RE.test(closingTime)) details.push("closingTime must be in HH:mm 24-hour format");
   if (openingTime && closingTime && openingTime === closingTime) details.push("closingTime must not equal openingTime");
@@ -104,13 +108,19 @@ export function validatePharmacyProfileUpdate(req, res, next) {
       details.push(`${field} must be a non-empty string`);
     }
   }
+  const maxLengths = { pharmacyName: 200, address: 300, phone: 30, googleMapsLink: 2000 };
+  for (const [field, max] of Object.entries(maxLengths)) {
+    if (typeof body[field] === "string" && body[field].length > max) {
+      details.push(`${field} must be at most ${max} characters`);
+    }
+  }
 
   if (details.length > 0) return next(fail(details));
   return next();
 }
 
 export function validateMedicineCreate(req, res, next) {
-  const { medicineName, genericName, description, category, price, quantity, expirationDate } = req.body || {};
+  const { medicineName, genericName, brandName, description, category, price, quantity, expirationDate } = req.body || {};
   const details = [];
 
   // .trim() === "" catches whitespace-only strings, which the previous
@@ -118,17 +128,29 @@ export function validateMedicineCreate(req, res, next) {
   // "", not "   ") — production-readiness audit finding, fixed here.
   if (!medicineName || typeof medicineName !== "string" || medicineName.trim() === "") {
     details.push("medicineName is required");
+  } else if (medicineName.length > 200) {
+    details.push("medicineName must be at most 200 characters");
   }
   if (!genericName || typeof genericName !== "string" || genericName.trim() === "") {
     details.push("genericName is required");
+  } else if (genericName.length > 200) {
+    details.push("genericName must be at most 200 characters");
+  }
+  if (brandName !== undefined && brandName !== null) {
+    if (typeof brandName !== "string") details.push("brandName must be a string");
+    else if (brandName.length > 200) details.push("brandName must be at most 200 characters");
   }
   // description/category are required per docs/ARCHITECTURE.md §1.3 (see
   // Medicine.js schema comment for the same fix, applied together).
   if (!description || typeof description !== "string" || description.trim() === "") {
     details.push("description is required");
+  } else if (description.length > 2000) {
+    details.push("description must be at most 2000 characters");
   }
   if (!category || typeof category !== "string" || category.trim() === "") {
     details.push("category is required");
+  } else if (category.length > 100) {
+    details.push("category must be at most 100 characters");
   }
   if (typeof price !== "number" || Number.isNaN(price) || price < 0) details.push("price must be a non-negative number");
   if (typeof quantity !== "number" || Number.isNaN(quantity) || quantity < 0 || !Number.isInteger(quantity)) {
@@ -178,6 +200,12 @@ export function validateMedicineUpdate(req, res, next) {
       if (typeof body[field] !== "string" || body[field].trim() === "") {
         details.push(`${field} cannot be cleared because it is required`);
       }
+    }
+  }
+  const maxLengths = { medicineName: 200, genericName: 200, brandName: 200, description: 2000, category: 100 };
+  for (const [field, max] of Object.entries(maxLengths)) {
+    if (typeof body[field] === "string" && body[field].length > max) {
+      details.push(`${field} must be at most ${max} characters`);
     }
   }
 

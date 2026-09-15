@@ -17,17 +17,24 @@ const medicineSchema = new mongoose.Schema(
       type: String,
       required: [true, "medicineName is required"],
       trim: true,
+      // Production-hardening: bound free-text length (matches the pattern
+      // already established for Report.additionalComment). No legitimate
+      // medicine name approaches this; it only guards against abuse/storage
+      // bloat and UI breakage from unbounded input.
+      maxlength: [200, "medicineName must be at most 200 characters"],
     },
     genericName: {
       type: String,
       required: [true, "genericName is required"],
       trim: true,
+      maxlength: [200, "genericName must be at most 200 characters"],
     },
     brandName: {
       type: String,
       required: false,
       trim: true,
       default: null,
+      maxlength: [200, "brandName must be at most 200 characters"],
     },
     description: {
       // Contract: docs/ARCHITECTURE.md §1.3 — "Must contain the medicine
@@ -37,6 +44,7 @@ const medicineSchema = new mongoose.Schema(
       type: String,
       required: [true, "description is required"],
       trim: true,
+      maxlength: [2000, "description must be at most 2000 characters"],
     },
     category: {
       // Contract: docs/ARCHITECTURE.md §1.3 — "Must be non-empty." Required
@@ -44,6 +52,7 @@ const medicineSchema = new mongoose.Schema(
       type: String,
       required: [true, "category is required"],
       trim: true,
+      maxlength: [100, "category must be at most 100 characters"],
     },
     price: {
       type: Number,

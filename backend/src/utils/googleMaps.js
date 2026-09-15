@@ -261,10 +261,6 @@ export async function resolvePharmacyLocation(
     await expandGoogleMapsUrl(originalLink);
 
   if (expandedUrl) {
-    console.log(
-      `[google maps] expanded URL: ${expandedUrl}`,
-    );
-
     const expandedCoordinates =
       extractCoordinates(expandedUrl);
 

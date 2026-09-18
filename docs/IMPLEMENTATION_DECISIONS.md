@@ -919,7 +919,62 @@ No physical deletion occurs.
 
 ---
 
-# Admin Provisioning Decision
+# Pharmacy Verification Decision
+
+## Status: DECIDED (interaction rules below flagged as this task's interpretation — not explicitly specified when introduced; revisit if evidence shows a conflict)
+
+Public registration previously created an immediately-ACTIVE, immediately-public
+pharmacy — anyone could claim to be a pharmacy with no proof of legitimacy. This
+introduces an admin verification gate between registration and public visibility.
+
+Two independent fields on Pharmacy, deliberately kept separate:
+
+```text
+verificationStatus: PENDING | APPROVED | REJECTED   (NEW)
+status:             ACTIVE | SUSPENDED | BANNED      (unchanged)
+```
+
+Resolved details:
+
+- **`verificationStatus` gates PUBLIC VISIBILITY only.** Public search, medicine
+  details, and pharmacy details now require `status === "ACTIVE" AND
+  verificationStatus === "APPROVED"` (additive condition alongside the existing
+  ACTIVE-only check).
+- **`status` continues to gate AUTHENTICATED ACCESS exactly as before, unchanged.**
+  A newly-registered (`PENDING`) pharmacy can still log in, set up its profile,
+  and add inventory immediately — none of that is blocked by verification. This
+  was the interpretive decision this task had to make in the absence of further
+  specification: the alternative (blocking authenticated access until approved)
+  would have required broader, riskier changes across existing login/dashboard
+  code with no clear indication it was wanted, versus this additive-only,
+  zero-regression approach.
+- **Registration default**: `status: "ACTIVE"` (unchanged default) +
+  `verificationStatus: "PENDING"` (new default) — so registration succeeds
+  exactly as before, just not yet publicly visible.
+- **`licenseNumber`**: required at registration. No format is validated — no
+  license-number format for any jurisdiction is documented anywhere in this
+  project, so only presence and a length bound (100 chars) are enforced rather
+  than inventing one.
+- **`licenseDocumentUrl`**: plumbing-only reference field, mirroring the
+  existing unresolved `logo` field exactly. **No storage provider was selected**
+  — the Logo/Storage Decision below remains PENDING CONFIRMATION and blocks this
+  field too, for the identical reason. No upload endpoint or UI exists for it.
+- **Admin review**: `PATCH /api/admin/pharmacies/:id/verification` (mirrors the
+  existing `/status` endpoint exactly), `GET /api/admin/pharmacies` accepts an
+  additional `verificationStatus` filter. No restricted transition model
+  (PENDING→APPROVED→REJECTED can move freely in any direction) — consistent
+  with `status` having no restricted transitions either.
+- **Existing pharmacies**: a one-off migration script
+  (`backend/src/scripts/backfillPharmacyVerificationStatus.js`, mirroring the
+  existing `resolveExistingPharmacyLocations.js` pattern) grandfathers every
+  pharmacy that existed before this change to `verificationStatus: "APPROVED"`,
+  so they don't vanish from public search the moment this deploys. **This script
+  must be run once, manually, against production before/at deploy time** — it
+  is not automatic (no scheduler, matching the project's existing "no scheduler"
+  principle).
+
+---
+
 
 ## Status: PENDING CONFIRMATION
 

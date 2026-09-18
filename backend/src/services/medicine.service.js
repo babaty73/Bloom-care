@@ -170,11 +170,12 @@ function toPublicMedicine(medicineDoc) {
 }
 
 // Public pharmacy-selection fields for population. Excludes email/passwordHash;
-// includes status only to decide inclusion below, never returned to the client.
-// Includes location (Nearby Pharmacy / Distance decision) for internal distance
-// calculation only — toPublicPharmacySummary() below never returns it.
+// includes status/verificationStatus only to decide inclusion below, never
+// returned to the client as such. Includes location (Nearby Pharmacy / Distance
+// decision) for internal distance calculation only — toPublicPharmacySummary()
+// below never returns it.
 const PUBLIC_PHARMACY_POPULATE_FIELDS =
-  "pharmacyName address phone googleMapsLink openingTime closingTime logo status location";
+  "pharmacyName address phone googleMapsLink openingTime closingTime logo status verificationStatus location";
 
 /**
  * Public medicine search for visitors.
@@ -196,7 +197,11 @@ const PUBLIC_PHARMACY_POPULATE_FIELDS =
 export async function searchPublicMedicines({ search, page, limit, latitude, longitude }) {
   const now = new Date();
 
-  const activePharmacyIds = (await Pharmacy.find({ status: "ACTIVE" }, "_id")).map((p) => p._id);
+  // Pharmacy Verification (production hardening): public search must exclude
+  // pharmacies still pending admin review, not just suspended/banned ones.
+  const activePharmacyIds = (
+    await Pharmacy.find({ status: "ACTIVE", verificationStatus: "APPROVED" }, "_id")
+  ).map((p) => p._id);
 
   const filter = {
     pharmacyId: { $in: activePharmacyIds },
@@ -287,7 +292,8 @@ export async function getPublicMedicineDetails(medicineId) {
   const medicine = await Medicine.findById(medicineId).populate("pharmacyId", PUBLIC_PHARMACY_POPULATE_FIELDS);
 
   const medicineExpired = medicine ? isExpired(medicine, now) : false;
-  const pharmacyUnavailable = !medicine?.pharmacyId || medicine.pharmacyId.status !== "ACTIVE";
+  const pharmacyUnavailable =
+    !medicine?.pharmacyId || medicine.pharmacyId.status !== "ACTIVE" || medicine.pharmacyId.verificationStatus !== "APPROVED";
 
   if (!medicine || medicineExpired || pharmacyUnavailable) {
     throw new ApiError(404, "RESOURCE_NOT_FOUND", "Medicine not found");

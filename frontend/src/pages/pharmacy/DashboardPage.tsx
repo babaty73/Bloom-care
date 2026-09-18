@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import * as pharmacyService from "../../services/pharmacy.service";
-import type { PharmacyDashboard } from "../../types/pharmacy.types";
+import type { PharmacyDashboard, OwnPharmacyProfile } from "../../types/pharmacy.types";
 import Loading from "../../components/common/Loading";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { ApiRequestError } from "../../utils/api";
@@ -11,14 +11,19 @@ type LoadState = "loading" | "error" | "success";
 function DashboardPage() {
   const [state, setState] = useState<LoadState>("loading");
   const [dashboard, setDashboard] = useState<PharmacyDashboard | null>(null);
+  const [profile, setProfile] = useState<OwnPharmacyProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
     setState("loading");
     setError(null);
     try {
-      const data = await pharmacyService.getOwnDashboard();
-      setDashboard(data);
+      const [dashboardData, profileData] = await Promise.all([
+        pharmacyService.getOwnDashboard(),
+        pharmacyService.getOwnProfile(),
+      ]);
+      setDashboard(dashboardData);
+      setProfile(profileData);
       setState("success");
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Failed to load dashboard");
@@ -37,6 +42,19 @@ function DashboardPage() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-10">
       <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+
+      {profile?.verificationStatus === "PENDING" && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Your pharmacy is awaiting admin verification. You can set up your profile and inventory now — everything
+          will be ready the moment you're approved — but visitors won't see your pharmacy in search until then.
+        </div>
+      )}
+      {profile?.verificationStatus === "REJECTED" && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Your pharmacy's verification was not approved, so it isn't visible to visitors. Check your license
+          information on your profile and contact the platform if you believe this is a mistake.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-gray-200 p-4">

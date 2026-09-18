@@ -27,6 +27,7 @@ export async function registerPharmacy({
   googleMapsLink,
   openingTime,
   closingTime,
+  licenseNumber,
 }) {
   const normalizedEmail = email.toLowerCase().trim();
 
@@ -51,6 +52,13 @@ export async function registerPharmacy({
     console.warn(`[pharmacy location] could not resolve location for new pharmacy: ${err.message}`);
   }
 
+  // Pharmacy Verification (production hardening): registration no longer
+  // grants immediate operational/public status. `status` stays ACTIVE
+  // (unchanged — the pharmacy can log in and set up its profile/inventory
+  // immediately) but `verificationStatus` starts PENDING, which excludes the
+  // pharmacy from all public-facing visibility until an admin approves it.
+  // Explicit here even though it's also the schema default, matching this
+  // file's existing style of passing every field explicitly.
   const pharmacy = await Pharmacy.create({
     pharmacyName,
     address,
@@ -61,6 +69,8 @@ export async function registerPharmacy({
     openingTime,
     closingTime,
     location,
+    licenseNumber,
+    verificationStatus: "PENDING",
   });
 
   const token = signToken({ sub: pharmacy._id.toString(), role: "pharmacy" });

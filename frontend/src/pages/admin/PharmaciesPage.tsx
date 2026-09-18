@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import * as adminService from "../../services/admin.service";
 import type { AuthenticatedPharmacy } from "../../types/auth.types";
-import type { PharmacyStatus } from "../../types/admin.types";
+import type { PharmacyStatus, PharmacyVerificationStatus } from "../../types/admin.types";
 import Loading from "../../components/common/Loading";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { ApiRequestError } from "../../utils/api";
@@ -9,9 +9,11 @@ import { ApiRequestError } from "../../utils/api";
 type LoadState = "loading" | "error" | "success";
 
 const STATUS_FILTERS: Array<PharmacyStatus | "ALL"> = ["ALL", "ACTIVE", "SUSPENDED", "BANNED"];
+const VERIFICATION_FILTERS: Array<PharmacyVerificationStatus | "ALL"> = ["ALL", "PENDING", "APPROVED", "REJECTED"];
 
 function PharmaciesPage() {
   const [filter, setFilter] = useState<PharmacyStatus | "ALL">("ALL");
+  const [verificationFilter, setVerificationFilter] = useState<PharmacyVerificationStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [state, setState] = useState<LoadState>("loading");
@@ -23,7 +25,12 @@ function PharmaciesPage() {
     setState("loading");
     setError(null);
     try {
-      const result = await adminService.listPharmacies(filter === "ALL" ? undefined : filter, page, 50);
+      const result = await adminService.listPharmacies(
+        filter === "ALL" ? undefined : filter,
+        page,
+        50,
+        verificationFilter === "ALL" ? undefined : verificationFilter,
+      );
       setPharmacies(result.items);
       setTotalPages(result.pagination.totalPages);
       setState("success");
@@ -36,10 +43,15 @@ function PharmaciesPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, page]);
+  }, [filter, verificationFilter, page]);
 
   function handleFilterChange(value: PharmacyStatus | "ALL") {
     setFilter(value);
+    setPage(1);
+  }
+
+  function handleVerificationFilterChange(value: PharmacyVerificationStatus | "ALL") {
+    setVerificationFilter(value);
     setPage(1);
   }
 
@@ -51,6 +63,17 @@ function PharmaciesPage() {
       setPharmacies((prev) => prev.map((p) => (p._id === id ? updated : p)));
     } catch (err) {
       setActionError(err instanceof ApiRequestError ? err.message : "Failed to update pharmacy status");
+    }
+  }
+
+  async function handleVerificationChange(id: string, verificationStatus: PharmacyVerificationStatus, confirmMessage?: string) {
+    if (confirmMessage && !window.confirm(confirmMessage)) return;
+    setActionError(null);
+    try {
+      const updated = await adminService.updatePharmacyVerification(id, verificationStatus);
+      setPharmacies((prev) => prev.map((p) => (p._id === id ? updated : p)));
+    } catch (err) {
+      setActionError(err instanceof ApiRequestError ? err.message : "Failed to update verification status");
     }
   }
 
@@ -84,6 +107,24 @@ function PharmaciesPage() {
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-xs font-medium text-gray-500">Verification:</span>
+        {VERIFICATION_FILTERS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handleVerificationFilterChange(value)}
+            className={`rounded-md px-3 py-1.5 font-medium ${
+              verificationFilter === value
+                ? "bg-emerald-600 text-white"
+                : "border border-gray-300 text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            {value}
+          </button>
+        ))}
+      </div>
+
       {actionError && <ErrorMessage message={actionError} />}
       {state === "loading" && <Loading label="Loading pharmacies..." />}
       {state === "error" && <ErrorMessage message={error ?? "Something went wrong"} onRetry={load} />}
@@ -98,21 +139,62 @@ function PharmaciesPage() {
                   <p className="font-semibold text-gray-900">{pharmacy.pharmacyName}</p>
                   <p className="text-sm text-gray-500">{pharmacy.email}</p>
                   <p className="text-sm text-gray-500">{pharmacy.address}</p>
+                  <p className="text-xs text-gray-400">License: {pharmacy.licenseNumber}</p>
                 </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    pharmacy.status === "ACTIVE"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : pharmacy.status === "SUSPENDED"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {pharmacy.status}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      pharmacy.status === "ACTIVE"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : pharmacy.status === "SUSPENDED"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {pharmacy.status}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      pharmacy.verificationStatus === "APPROVED"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : pharmacy.verificationStatus === "PENDING"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {pharmacy.verificationStatus}
+                  </span>
+                </div>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
+                {pharmacy.verificationStatus !== "APPROVED" && (
+                  <button
+                    type="button"
+                    onClick={() => handleVerificationChange(pharmacy._id, "APPROVED")}
+                    className="rounded-md border border-emerald-300 px-3 py-1.5 text-emerald-700 hover:bg-emerald-50"
+                  >
+                    Approve
+                  </button>
+                )}
+                {pharmacy.verificationStatus !== "REJECTED" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleVerificationChange(
+                        pharmacy._id,
+                        "REJECTED",
+                        `Reject ${pharmacy.pharmacyName}'s application? They will remain hidden from visitor search.`,
+                      )
+                    }
+                    className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50"
+                  >
+                    Reject
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
                 {pharmacy.status !== "ACTIVE" && (
                   <button
                     type="button"

@@ -16,8 +16,8 @@ export async function getDashboard(req, res, next) {
 
 export async function listPharmacies(req, res, next) {
   try {
-    const { status } = req.query;
-    const result = await adminService.listPharmacies({ status }, req.pagination);
+    const { status, verificationStatus } = req.query;
+    const result = await adminService.listPharmacies({ status, verificationStatus }, req.pagination);
     return sendSuccess(res, {
       statusCode: 200,
       data: result,
@@ -37,6 +37,21 @@ export async function updatePharmacyStatus(req, res, next) {
       statusCode: 200,
       data: pharmacy,
       message: "Pharmacy status updated successfully",
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function updatePharmacyVerification(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { verificationStatus } = req.body;
+    const pharmacy = await adminService.updatePharmacyVerification(id, verificationStatus);
+    return sendSuccess(res, {
+      statusCode: 200,
+      data: pharmacy,
+      message: "Pharmacy verification status updated successfully",
     });
   } catch (err) {
     return next(err);

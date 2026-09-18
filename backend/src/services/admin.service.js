@@ -24,6 +24,10 @@ export async function updatePharmacyStatus(pharmacyId, status) {
   return pharmacyService.updatePharmacyStatus(pharmacyId, status);
 }
 
+export async function updatePharmacyVerification(pharmacyId, verificationStatus) {
+  return pharmacyService.updatePharmacyVerification(pharmacyId, verificationStatus);
+}
+
 export async function deletePharmacy(pharmacyId) {
   return pharmacyService.deletePharmacyById(pharmacyId);
 }

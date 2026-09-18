@@ -4,8 +4,9 @@ export type Pharmacy = AuthenticatedPharmacy;
 
 // Public (unauthenticated) pharmacy response shape. Contract: docs/IMPLEMENTATION_DECISIONS.md
 // §7 "Public vs private pharmacy fields" — email is never included here, unlike the
-// pharmacy's own private profile (Pharmacy, above).
-export type PublicPharmacyProfile = Omit<Pharmacy, "email">;
+// pharmacy's own private profile (Pharmacy, above). License fields are also
+// never public (Pharmacy Verification — verification info, not for visitors).
+export type PublicPharmacyProfile = Omit<Pharmacy, "email" | "licenseNumber" | "licenseDocumentUrl">;
 
 // Nearby Pharmacy / Distance decision — location-resolution feedback (Domain 4).
 // Only the pharmacy's own profile views (GET/PATCH /pharmacies/me) include this

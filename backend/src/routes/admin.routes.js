@@ -6,6 +6,7 @@ import {
   validateObjectIdParam,
   validatePagination,
   validatePharmacyStatusUpdate,
+  validatePharmacyVerificationUpdate,
   validateAdminPharmacyFilters,
   validateReportFilters,
   validateReportStatusUpdate,
@@ -27,6 +28,12 @@ router.patch(
   validateObjectIdParam("id"),
   validatePharmacyStatusUpdate,
   adminController.updatePharmacyStatus,
+);
+router.patch(
+  "/pharmacies/:id/verification",
+  validateObjectIdParam("id"),
+  validatePharmacyVerificationUpdate,
+  adminController.updatePharmacyVerification,
 );
 router.delete("/pharmacies/:id", validateObjectIdParam("id"), adminController.deletePharmacy);
 

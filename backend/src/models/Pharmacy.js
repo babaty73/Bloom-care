@@ -69,6 +69,46 @@ const pharmacySchema = new mongoose.Schema(
       enum: ["ACTIVE", "SUSPENDED", "BANNED"],
       default: "ACTIVE",
     },
+    // Pharmacy Verification (production-hardening addition — public registration
+    // was allowing anyone to claim to be a pharmacy and immediately become
+    // publicly visible). Deliberately a SEPARATE field from `status` above:
+    // `status` continues to gate authenticated access exactly as before
+    // (unchanged — a newly-registered pharmacy can still log in and set up its
+    // profile/inventory while awaiting review); `verificationStatus` instead
+    // gates PUBLIC VISIBILITY only (see medicine.service.js / pharmacy.service.js
+    // public-facing queries, which now require BOTH status === "ACTIVE" AND
+    // verificationStatus === "APPROVED"). This interaction was not fully
+    // specified in the task that introduced this field — flagged here as the
+    // chosen interpretation, not an assumption slipped in silently.
+    verificationStatus: {
+      type: String,
+      enum: ["PENDING", "APPROVED", "REJECTED"],
+      default: "PENDING",
+    },
+    licenseNumber: {
+      // No format is validated beyond presence and a length bound — the
+      // specification/docs do not define a license-number format for any
+      // jurisdiction, and inventing one (e.g. an Ethiopian-specific pattern)
+      // was explicitly out of scope for this task.
+      type: String,
+      required: [true, "licenseNumber is required"],
+      trim: true,
+      maxlength: [100, "licenseNumber must be at most 100 characters"],
+    },
+    // Plumbing-only reference field, deliberately mirroring `logo` above: the
+    // Logo/Storage Decision remains PENDING CONFIRMATION project-wide, and that
+    // decision blocks selecting a storage provider for THIS field too (a
+    // license document has the exact same "where do we put the file" problem
+    // as a logo). No upload endpoint or storage integration exists anywhere in
+    // this codebase for this field — nothing currently sets it. It exists so
+    // that whichever storage mechanism gets agreed on later has a field to
+    // write the resulting reference into, without a schema migration at that
+    // point.
+    licenseDocumentUrl: {
+      type: String,
+      required: false,
+      default: null,
+    },
     // Nearby Pharmacy / Distance decision (docs/IMPLEMENTATION_DECISIONS.md
     // Distance Decision): resolved internally from googleMapsLink via Geoapify
     // (see utils/googleMaps.js). NEVER a user-entered field — no manual

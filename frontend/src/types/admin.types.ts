@@ -4,12 +4,13 @@ import type { ReportReason } from "./report.types";
 // Contract: docs/ARCHITECTURE.md §2.5. Admin-authenticated data shapes only.
 
 export interface AdminDashboardStats {
-  pharmacies: { total: number; active: number; suspended: number; banned: number };
+  pharmacies: { total: number; active: number; suspended: number; banned: number; pendingVerification: number };
   totalMedicines: number;
   reports: { total: number; pending: number };
 }
 
 export type PharmacyStatus = "ACTIVE" | "SUSPENDED" | "BANNED";
+export type PharmacyVerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface PaginatedPharmacies {
   items: AuthenticatedPharmacy[];

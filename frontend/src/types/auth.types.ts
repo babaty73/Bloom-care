@@ -13,6 +13,15 @@ export interface AuthenticatedPharmacy {
   closingTime: string;
   logo: string | null;
   status: "ACTIVE" | "SUSPENDED" | "BANNED";
+  // Pharmacy Verification (production hardening) — gates public visibility
+  // only; a PENDING/REJECTED pharmacy can still log in and use its dashboard
+  // normally (see backend/src/models/Pharmacy.js for the full rationale).
+  verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
+  licenseNumber: string;
+  // Plumbing-only (see backend/src/models/Pharmacy.js) — always null until a
+  // storage provider is decided and an upload flow is built. Not rendered
+  // anywhere in the UI yet.
+  licenseDocumentUrl: string | null;
   isOpen: boolean;
   createdAt: string;
   updatedAt: string;
@@ -28,7 +37,7 @@ export interface AuthenticatedAdmin {
 
 export interface PharmacyLoginResponse {
   token: string;
-  pharmacy: AuthenticatedPharmacy;
+  pharmacy: AuthenticatedPharmacy & { locationResolved?: boolean };
 }
 
 export interface AdminLoginResponse {
@@ -45,6 +54,7 @@ export interface PharmacyRegisterPayload {
   googleMapsLink: string;
   openingTime: string;
   closingTime: string;
+  licenseNumber: string;
 }
 
 export interface PharmacyLoginPayload {

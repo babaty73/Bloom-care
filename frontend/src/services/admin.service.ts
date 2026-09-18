@@ -4,6 +4,7 @@ import type {
   AdminDashboardStats,
   PaginatedPharmacies,
   PharmacyStatus,
+  PharmacyVerificationStatus,
   AdminReportListItem,
   PaginatedAdminReportListItems,
   AdminReportFilters,
@@ -13,9 +14,15 @@ export function getDashboard() {
   return apiRequest<AdminDashboardStats>("/admin/dashboard");
 }
 
-export function listPharmacies(status?: PharmacyStatus, page = 1, limit = 20) {
+export function listPharmacies(
+  status?: PharmacyStatus,
+  page = 1,
+  limit = 20,
+  verificationStatus?: PharmacyVerificationStatus,
+) {
   const query = new URLSearchParams();
   if (status) query.set("status", status);
+  if (verificationStatus) query.set("verificationStatus", verificationStatus);
   query.set("page", String(page));
   query.set("limit", String(limit));
   return apiRequest<PaginatedPharmacies>(`/admin/pharmacies?${query.toString()}`);
@@ -23,6 +30,13 @@ export function listPharmacies(status?: PharmacyStatus, page = 1, limit = 20) {
 
 export function updatePharmacyStatus(id: string, status: PharmacyStatus) {
   return apiRequest<AuthenticatedPharmacy>(`/admin/pharmacies/${id}/status`, { method: "PATCH", body: { status } });
+}
+
+export function updatePharmacyVerification(id: string, verificationStatus: PharmacyVerificationStatus) {
+  return apiRequest<AuthenticatedPharmacy>(`/admin/pharmacies/${id}/verification`, {
+    method: "PATCH",
+    body: { verificationStatus },
+  });
 }
 
 export function deletePharmacy(id: string) {

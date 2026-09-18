@@ -26,15 +26,21 @@ function toPublicPharmacy(pharmacyDoc) {
 function toVisitorPharmacy(pharmacyDoc) {
   const pharmacy = toPublicPharmacy(pharmacyDoc);
   delete pharmacy.email;
+  // License fields are verification-only, never public — regardless of
+  // approval state (see Pharmacy Verification note in models/Pharmacy.js).
+  delete pharmacy.licenseNumber;
+  delete pharmacy.licenseDocumentUrl;
   return pharmacy;
 }
 
 export async function getPharmacyById(pharmacyId) {
   const pharmacy = await Pharmacy.findById(pharmacyId);
   // Suspended/banned pharmacies must not be visitor-visible, otherwise admin
-  // suspension/ban has no visible effect. Reported as RESOURCE_NOT_FOUND rather
-  // than a distinct status so visitors can't infer moderation state.
-  if (!pharmacy || pharmacy.status !== "ACTIVE") {
+  // suspension/ban has no visible effect. Not-yet-approved pharmacies must
+  // not be visitor-visible either (Pharmacy Verification — see models/Pharmacy.js).
+  // Reported as RESOURCE_NOT_FOUND rather than a distinct status so visitors
+  // can't infer moderation/verification state.
+  if (!pharmacy || pharmacy.status !== "ACTIVE" || pharmacy.verificationStatus !== "APPROVED") {
     throw new ApiError(404, "RESOURCE_NOT_FOUND", "Pharmacy not found");
   }
   return toVisitorPharmacy(pharmacy);
@@ -107,9 +113,10 @@ export async function getOwnDashboard(pharmacyId) {
 // rather than duplicating pharmacy domain logic.
 // ---------------------------------------------------------------------------
 
-export async function listPharmaciesForAdmin({ status }, { page, limit }) {
+export async function listPharmaciesForAdmin({ status, verificationStatus }, { page, limit }) {
   const filter = {};
   if (status) filter.status = status;
+  if (verificationStatus) filter.verificationStatus = verificationStatus;
 
   const skip = (page - 1) * limit;
 
@@ -135,6 +142,26 @@ export async function updatePharmacyStatus(pharmacyId, status) {
 }
 
 /**
+ * Admin review of a pharmacy's registration application. Mirrors
+ * updatePharmacyStatus above exactly — no restricted transition model here
+ * either (an admin may move a pharmacy between PENDING/APPROVED/REJECTED
+ * freely, e.g. re-approving a previously rejected application), consistent
+ * with `status` having no restricted transitions either (see ARCHITECTURE.md's
+ * own note that no state-transition model was ever formally agreed for
+ * pharmacy moderation — applied the same way here rather than inventing a
+ * stricter rule for this new field).
+ */
+export async function updatePharmacyVerification(pharmacyId, verificationStatus) {
+  const pharmacy = await Pharmacy.findById(pharmacyId);
+  if (!pharmacy) {
+    throw new ApiError(404, "RESOURCE_NOT_FOUND", "Pharmacy not found");
+  }
+  pharmacy.verificationStatus = verificationStatus;
+  await pharmacy.save();
+  return toPublicPharmacy(pharmacy);
+}
+
+/**
  * Intentionally non-cascading: associated Medicine documents are left in place,
  * mirroring the "expiration is non-destructive" precedent. Public search/details
  * already exclude medicines whose pharmacy is missing or not ACTIVE, so orphaned
@@ -149,11 +176,12 @@ export async function deletePharmacyById(pharmacyId) {
 }
 
 export async function countPharmaciesByStatus() {
-  const [total, active, suspended, banned] = await Promise.all([
+  const [total, active, suspended, banned, pendingVerification] = await Promise.all([
     Pharmacy.countDocuments({}),
     Pharmacy.countDocuments({ status: "ACTIVE" }),
     Pharmacy.countDocuments({ status: "SUSPENDED" }),
     Pharmacy.countDocuments({ status: "BANNED" }),
+    Pharmacy.countDocuments({ verificationStatus: "PENDING" }),
   ]);
-  return { total, active, suspended, banned };
+  return { total, active, suspended, banned, pendingVerification };
 }

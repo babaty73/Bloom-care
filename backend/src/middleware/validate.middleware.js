@@ -30,7 +30,8 @@ export function validateObjectIdParam(paramName) {
 }
 
 export function validatePharmacyRegister(req, res, next) {
-  const { pharmacyName, address, phone, email, password, googleMapsLink, openingTime, closingTime } = req.body || {};
+  const { pharmacyName, address, phone, email, password, googleMapsLink, openingTime, closingTime, licenseNumber } =
+    req.body || {};
   const details = [];
 
   if (!pharmacyName || typeof pharmacyName !== "string") details.push("pharmacyName is required");
@@ -45,6 +46,15 @@ export function validatePharmacyRegister(req, res, next) {
   if (!openingTime || !TIME_RE.test(openingTime)) details.push("openingTime must be in HH:mm 24-hour format");
   if (!closingTime || !TIME_RE.test(closingTime)) details.push("closingTime must be in HH:mm 24-hour format");
   if (openingTime && closingTime && openingTime === closingTime) details.push("closingTime must not equal openingTime");
+
+  // Pharmacy Verification (production hardening): license number is required
+  // so an admin has something concrete to check before approving a pharmacy.
+  // No format is validated — the project has no documented license-number
+  // format for any jurisdiction, so only presence and a length bound are
+  // enforced here rather than inventing one.
+  if (!licenseNumber || typeof licenseNumber !== "string") details.push("licenseNumber is required");
+  else if (licenseNumber.trim().length === 0) details.push("licenseNumber is required");
+  else if (licenseNumber.length > 100) details.push("licenseNumber must be at most 100 characters");
 
   if (!password || typeof password !== "string" || password.length < 8) {
     details.push("password must be at least 8 characters long");
@@ -329,6 +339,10 @@ export function validateReportFilters(req, res, next) {
 // that file's internals; Pharmacy.js does not currently export this list.
 const PHARMACY_STATUS_VALUES = ["ACTIVE", "SUSPENDED", "BANNED"];
 
+// Pharmacy Verification (production hardening). Mirrors models/Pharmacy.js's
+// `verificationStatus` enum, same reasoning as PHARMACY_STATUS_VALUES above.
+const PHARMACY_VERIFICATION_VALUES = ["PENDING", "APPROVED", "REJECTED"];
+
 export function validatePharmacyStatusUpdate(req, res, next) {
   const { status } = req.body || {};
   if (!status || !PHARMACY_STATUS_VALUES.includes(status)) {
@@ -337,11 +351,24 @@ export function validatePharmacyStatusUpdate(req, res, next) {
   return next();
 }
 
-export function validateAdminPharmacyFilters(req, res, next) {
-  const { status } = req.query;
-  if (status !== undefined && !PHARMACY_STATUS_VALUES.includes(status)) {
-    return next(fail([`status filter must be one of: ${PHARMACY_STATUS_VALUES.join(", ")}`]));
+export function validatePharmacyVerificationUpdate(req, res, next) {
+  const { verificationStatus } = req.body || {};
+  if (!verificationStatus || !PHARMACY_VERIFICATION_VALUES.includes(verificationStatus)) {
+    return next(fail([`verificationStatus must be one of: ${PHARMACY_VERIFICATION_VALUES.join(", ")}`]));
   }
+  return next();
+}
+
+export function validateAdminPharmacyFilters(req, res, next) {
+  const { status, verificationStatus } = req.query;
+  const details = [];
+  if (status !== undefined && !PHARMACY_STATUS_VALUES.includes(status)) {
+    details.push(`status filter must be one of: ${PHARMACY_STATUS_VALUES.join(", ")}`);
+  }
+  if (verificationStatus !== undefined && !PHARMACY_VERIFICATION_VALUES.includes(verificationStatus)) {
+    details.push(`verificationStatus filter must be one of: ${PHARMACY_VERIFICATION_VALUES.join(", ")}`);
+  }
+  if (details.length > 0) return next(fail(details));
   return next();
 }
 

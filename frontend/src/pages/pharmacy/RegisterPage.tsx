@@ -14,6 +14,7 @@ const initialForm: PharmacyRegisterPayload = {
   googleMapsLink: "",
   openingTime: "",
   closingTime: "",
+  licenseNumber: "",
 };
 
 function RegisterPage() {
@@ -125,6 +126,20 @@ function RegisterPage() {
           />
           <span className="text-xs font-normal text-gray-500">
             Open Google Maps, search for your pharmacy, tap Share, and paste the link here.
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          Pharmacy License Number
+          <input
+            required
+            maxLength={100}
+            value={form.licenseNumber}
+            onChange={(e) => update("licenseNumber", e.target.value)}
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+          />
+          <span className="text-xs font-normal text-gray-500">
+            An admin will verify this before your pharmacy appears in visitor search.
           </span>
         </label>
 

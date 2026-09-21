@@ -142,22 +142,30 @@ export async function updatePharmacyStatus(pharmacyId, status) {
 }
 
 /**
- * Admin review of a pharmacy's registration application. Mirrors
- * updatePharmacyStatus above exactly — no restricted transition model here
- * either (an admin may move a pharmacy between PENDING/APPROVED/REJECTED
- * freely, e.g. re-approving a previously rejected application), consistent
- * with `status` having no restricted transitions either (see ARCHITECTURE.md's
- * own note that no state-transition model was ever formally agreed for
- * pharmacy moderation — applied the same way here rather than inventing a
- * stricter rule for this new field).
+ * Admin review of a pharmacy's registration application. Contract:
+ * docs/IMPLEMENTATION_DECISIONS.md Pharmacy Verification Decision — only
+ * PENDING → APPROVED and PENDING → REJECTED are valid transitions (mirrors
+ * the Report status-transition model exactly, including the same atomic
+ * findOneAndUpdate race-safety reasoning: two concurrent review attempts on
+ * the same application must not let one silently overwrite the other).
  */
 export async function updatePharmacyVerification(pharmacyId, verificationStatus) {
-  const pharmacy = await Pharmacy.findById(pharmacyId);
+  const pharmacy = await Pharmacy.findOneAndUpdate(
+    { _id: pharmacyId, verificationStatus: "PENDING" },
+    { verificationStatus },
+    { new: true },
+  );
+
   if (!pharmacy) {
-    throw new ApiError(404, "RESOURCE_NOT_FOUND", "Pharmacy not found");
+    const exists = await Pharmacy.exists({ _id: pharmacyId });
+    if (!exists) {
+      throw new ApiError(404, "RESOURCE_NOT_FOUND", "Pharmacy not found");
+    }
+    throw new ApiError(400, "VALIDATION_ERROR", "Only a PENDING application can be approved or rejected", [
+      "application is no longer PENDING (already reviewed, possibly by a concurrent request)",
+    ]);
   }
-  pharmacy.verificationStatus = verificationStatus;
-  await pharmacy.save();
+
   return toPublicPharmacy(pharmacy);
 }
 

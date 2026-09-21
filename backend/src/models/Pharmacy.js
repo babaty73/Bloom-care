@@ -71,19 +71,28 @@ const pharmacySchema = new mongoose.Schema(
     },
     // Pharmacy Verification (production-hardening addition — public registration
     // was allowing anyone to claim to be a pharmacy and immediately become
-    // publicly visible). Deliberately a SEPARATE field from `status` above:
-    // `status` continues to gate authenticated access exactly as before
-    // (unchanged — a newly-registered pharmacy can still log in and set up its
-    // profile/inventory while awaiting review); `verificationStatus` instead
-    // gates PUBLIC VISIBILITY only (see medicine.service.js / pharmacy.service.js
-    // public-facing queries, which now require BOTH status === "ACTIVE" AND
-    // verificationStatus === "APPROVED"). This interaction was not fully
-    // specified in the task that introduced this field — flagged here as the
-    // chosen interpretation, not an assumption slipped in silently.
+    // publicly visible). Deliberately a SEPARATE field from `status` above.
+    // A pharmacy is operational/public ONLY when status === "ACTIVE" AND
+    // verificationStatus === "APPROVED" (see requireActivePharmacy middleware,
+    // auth.service.js loginPharmacy, and the public-facing queries in
+    // medicine.service.js / pharmacy.service.js, all of which enforce this).
+    // PENDING/REJECTED pharmacies cannot log in or use any operational API.
     verificationStatus: {
       type: String,
       enum: ["PENDING", "APPROVED", "REJECTED"],
       default: "PENDING",
+    },
+    // Non-sensitive lookup code (e.g. "BC-7F4K92") shown to an applicant at
+    // registration so they can check their status without an operational
+    // session (which registration deliberately no longer grants — see
+    // auth.service.js). Looked up together with the registration email; never
+    // exposes the pharmacy's MongoDB _id or any other field.
+    applicationReference: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      uppercase: true,
     },
     licenseNumber: {
       // No format is validated beyond presence and a length bound — the

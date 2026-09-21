@@ -5,7 +5,8 @@ import { sendSuccess } from "../utils/apiResponse.js";
 
 export async function registerPharmacy(req, res, next) {
   try {
-    const { pharmacyName, address, phone, email, password, googleMapsLink, openingTime, closingTime } = req.body;
+    const { pharmacyName, address, phone, email, password, googleMapsLink, openingTime, closingTime, licenseNumber } =
+      req.body;
     const result = await authService.registerPharmacy({
       pharmacyName,
       address,
@@ -15,11 +16,14 @@ export async function registerPharmacy(req, res, next) {
       googleMapsLink,
       openingTime,
       closingTime,
+      licenseNumber,
     });
+    // 201: an application resource was created. No token/session is issued —
+    // see auth.service.js registerPharmacy (Pharmacy Verification).
     return sendSuccess(res, {
       statusCode: 201,
       data: result,
-      message: "Pharmacy registered successfully",
+      message: "Application submitted successfully. Your pharmacy will be reviewed by an admin before it appears in search.",
     });
   } catch (err) {
     return next(err);

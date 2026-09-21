@@ -80,6 +80,12 @@ function LoginPage() {
           Register your pharmacy
         </Link>
       </p>
+      <p className="text-sm text-gray-600">
+        Waiting on approval?{" "}
+        <Link to="/pharmacy/application-status" className="font-medium text-emerald-600 hover:underline">
+          Check your application status
+        </Link>
+      </p>
     </div>
   );
 }

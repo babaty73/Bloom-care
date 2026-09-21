@@ -13,9 +13,11 @@ export interface AuthenticatedPharmacy {
   closingTime: string;
   logo: string | null;
   status: "ACTIVE" | "SUSPENDED" | "BANNED";
-  // Pharmacy Verification (production hardening) — gates public visibility
-  // only; a PENDING/REJECTED pharmacy can still log in and use its dashboard
-  // normally (see backend/src/models/Pharmacy.js for the full rationale).
+  // Pharmacy Verification — gates both login and public visibility. A
+  // pharmacy that successfully authenticates always has verificationStatus
+  // "APPROVED" (PENDING/REJECTED are blocked at login and at every subsequent
+  // authenticated request — see requireActivePharmacy on the backend). Kept
+  // on this type for accuracy/completeness, not because it varies here.
   verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
   licenseNumber: string;
   // Plumbing-only (see backend/src/models/Pharmacy.js) — always null until a
@@ -45,6 +47,13 @@ export interface AdminLoginResponse {
   admin: AuthenticatedAdmin;
 }
 
+// Pharmacy Verification: registration creates a PENDING application, not an
+// operational session — no token, no pharmacy profile. Only a non-sensitive
+// reference the applicant can use later at the application-status lookup.
+export interface PharmacyRegistrationResult {
+  applicationReference: string;
+}
+
 export interface PharmacyRegisterPayload {
   pharmacyName: string;
   address: string;
@@ -55,6 +64,15 @@ export interface PharmacyRegisterPayload {
   openingTime: string;
   closingTime: string;
   licenseNumber: string;
+}
+
+export interface ApplicationStatusLookupPayload {
+  applicationReference: string;
+  email: string;
+}
+
+export interface ApplicationStatusResult {
+  verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 export interface PharmacyLoginPayload {

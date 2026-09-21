@@ -168,29 +168,29 @@ function PharmaciesPage() {
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
-                {pharmacy.verificationStatus !== "APPROVED" && (
-                  <button
-                    type="button"
-                    onClick={() => handleVerificationChange(pharmacy._id, "APPROVED")}
-                    className="rounded-md border border-emerald-300 px-3 py-1.5 text-emerald-700 hover:bg-emerald-50"
-                  >
-                    Approve
-                  </button>
-                )}
-                {pharmacy.verificationStatus !== "REJECTED" && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleVerificationChange(
-                        pharmacy._id,
-                        "REJECTED",
-                        `Reject ${pharmacy.pharmacyName}'s application? They will remain hidden from visitor search.`,
-                      )
-                    }
-                    className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50"
-                  >
-                    Reject
-                  </button>
+                {pharmacy.verificationStatus === "PENDING" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleVerificationChange(pharmacy._id, "APPROVED")}
+                      className="rounded-md border border-emerald-300 px-3 py-1.5 text-emerald-700 hover:bg-emerald-50"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleVerificationChange(
+                          pharmacy._id,
+                          "REJECTED",
+                          `Reject ${pharmacy.pharmacyName}'s application? They will remain hidden from visitor search.`,
+                        )
+                      }
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50"
+                    >
+                      Reject
+                    </button>
+                  </>
                 )}
               </div>
 

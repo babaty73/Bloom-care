@@ -11,6 +11,7 @@ import {
   validateMedicineCreate,
   validateMedicineUpdate,
   validatePagination,
+  validateApplicationStatusLookup,
 } from "../middleware/validate.middleware.js";
 
 const router = Router();
@@ -50,7 +51,12 @@ router.delete("/me/medicines/:id", validateObjectIdParam("id"), medicineControll
 // in report.controller.js/report.service.js (Reports domain), not duplicated here.
 router.get("/me/reports", validatePagination, reportController.listOwnReports);
 
-// --- Public route ---
+// --- Public routes ---
+// Pharmacy Verification: application-status lookup, deliberately public and
+// tokenless (registration no longer issues a session — see auth.service.js).
+// Registered before "/:id" for the same reason "/me" is above.
+router.post("/application-status", validateApplicationStatusLookup, pharmacyController.checkApplicationStatus);
+
 router.get("/:id", validateObjectIdParam("id"), pharmacyController.getPharmacyById);
 
 export default router;

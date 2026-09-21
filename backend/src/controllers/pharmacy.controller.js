@@ -1,4 +1,5 @@
 import * as pharmacyService from "../services/pharmacy.service.js";
+import * as authService from "../services/auth.service.js";
 import { sendSuccess } from "../utils/apiResponse.js";
 
 export async function getPharmacyById(req, res, next) {
@@ -36,6 +37,16 @@ export async function getOwnDashboard(req, res, next) {
     const pharmacyId = req.auth.sub;
     const dashboard = await pharmacyService.getOwnDashboard(pharmacyId);
     return sendSuccess(res, { statusCode: 200, data: dashboard, message: "Dashboard retrieved successfully" });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function checkApplicationStatus(req, res, next) {
+  try {
+    const { applicationReference, email } = req.body;
+    const result = await authService.checkApplicationStatus({ applicationReference, email });
+    return sendSuccess(res, { statusCode: 200, data: result, message: "Application status retrieved successfully" });
   } catch (err) {
     return next(err);
   }

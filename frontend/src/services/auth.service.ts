@@ -3,12 +3,13 @@ import type {
   PharmacyLoginResponse,
   AdminLoginResponse,
   PharmacyRegisterPayload,
+  PharmacyRegistrationResult,
   PharmacyLoginPayload,
   AdminLoginPayload,
 } from "../types/auth.types";
 
 export function registerPharmacy(payload: PharmacyRegisterPayload) {
-  return apiRequest<PharmacyLoginResponse>("/auth/pharmacy/register", {
+  return apiRequest<PharmacyRegistrationResult>("/auth/pharmacy/register", {
     method: "POST",
     body: payload,
     auth: false,

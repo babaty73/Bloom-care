@@ -5,6 +5,7 @@ import type {
   PharmacyProfileUpdatePayload,
   PharmacyDashboard,
 } from "../types/pharmacy.types";
+import type { ApplicationStatusLookupPayload, ApplicationStatusResult } from "../types/auth.types";
 
 export function getPharmacyById(id: string) {
   return apiRequest<PublicPharmacyProfile>(`/pharmacies/${id}`, { auth: false });
@@ -20,4 +21,12 @@ export function updateOwnProfile(payload: PharmacyProfileUpdatePayload) {
 
 export function getOwnDashboard() {
   return apiRequest<PharmacyDashboard>("/pharmacies/me/dashboard");
+}
+
+export function checkApplicationStatus(payload: ApplicationStatusLookupPayload) {
+  return apiRequest<ApplicationStatusResult>("/pharmacies/application-status", {
+    method: "POST",
+    body: payload,
+    auth: false,
+  });
 }

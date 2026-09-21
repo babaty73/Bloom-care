@@ -5,7 +5,6 @@ import type {
   AuthenticatedPharmacy,
   AuthenticatedAdmin,
   PharmacyLoginPayload,
-  PharmacyRegisterPayload,
   AdminLoginPayload,
   UserRole,
 } from "../types/auth.types";
@@ -15,6 +14,11 @@ import type {
 // bloomcare_token or role state directly. Role storage itself lives in
 // utils/api.ts (the shared API layer) so the session-expiry handling there can
 // read/clear it without a second, duplicate copy of this storage logic.
+//
+// NOTE: pharmacy registration is deliberately NOT session-creating (Pharmacy
+// Verification — see docs/IMPLEMENTATION_DECISIONS.md). It no longer returns
+// a token, so it has no corresponding method here; RegisterPage.tsx calls
+// authService.registerPharmacy directly instead of going through this context.
 
 interface AuthState {
   role: UserRole | null;
@@ -26,7 +30,6 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   loginPharmacy: (payload: PharmacyLoginPayload) => Promise<void>;
-  registerPharmacy: (payload: PharmacyRegisterPayload) => Promise<void>;
   loginAdmin: (payload: AdminLoginPayload) => Promise<void>;
   updatePharmacyState: (pharmacy: AuthenticatedPharmacy) => void;
   logout: () => void;
@@ -61,14 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPharmacy(result.pharmacy);
   }, []);
 
-  const registerPharmacy = useCallback(async (payload: PharmacyRegisterPayload) => {
-    const result = await authService.registerPharmacy(payload);
-    persistToken(result.token);
-    setStoredRole("pharmacy");
-    setRole("pharmacy");
-    setPharmacy(result.pharmacy);
-  }, []);
-
   const loginAdmin = useCallback(async (payload: AdminLoginPayload) => {
     const result = await authService.loginAdmin(payload);
     persistToken(result.token);
@@ -97,12 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: role !== null,
       isInitializing,
       loginPharmacy,
-      registerPharmacy,
       loginAdmin,
       updatePharmacyState,
       logout,
     }),
-    [role, pharmacy, admin, isInitializing, loginPharmacy, registerPharmacy, loginAdmin, updatePharmacyState, logout],
+    [role, pharmacy, admin, isInitializing, loginPharmacy, loginAdmin, updatePharmacyState, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

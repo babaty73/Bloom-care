@@ -921,13 +921,15 @@ No physical deletion occurs.
 
 # Pharmacy Verification Decision
 
-## Status: DECIDED (interaction rules below flagged as this task's interpretation — not explicitly specified when introduced; revisit if evidence shows a conflict)
+## Status: DECIDED
 
 Public registration previously created an immediately-ACTIVE, immediately-public
 pharmacy — anyone could claim to be a pharmacy with no proof of legitimacy. This
-introduces an admin verification gate between registration and public visibility.
+introduces an admin verification gate between registration and any operational
+access (public visibility AND authenticated access), driven by an
+applicant-facing status-tracking flow rather than an immediate session.
 
-Two independent fields on Pharmacy, deliberately kept separate:
+Two independent fields on Pharmacy:
 
 ```text
 verificationStatus: PENDING | APPROVED | REJECTED   (NEW)
@@ -936,21 +938,28 @@ status:             ACTIVE | SUSPENDED | BANNED      (unchanged)
 
 Resolved details:
 
-- **`verificationStatus` gates PUBLIC VISIBILITY only.** Public search, medicine
-  details, and pharmacy details now require `status === "ACTIVE" AND
-  verificationStatus === "APPROVED"` (additive condition alongside the existing
-  ACTIVE-only check).
-- **`status` continues to gate AUTHENTICATED ACCESS exactly as before, unchanged.**
-  A newly-registered (`PENDING`) pharmacy can still log in, set up its profile,
-  and add inventory immediately — none of that is blocked by verification. This
-  was the interpretive decision this task had to make in the absence of further
-  specification: the alternative (blocking authenticated access until approved)
-  would have required broader, riskier changes across existing login/dashboard
-  code with no clear indication it was wanted, versus this additive-only,
-  zero-regression approach.
+- **A pharmacy is operational (can log in, use any `/me...` API, and appears
+  publicly) only when `verificationStatus === "APPROVED"` AND
+  `status === "ACTIVE"`.** PENDING and REJECTED pharmacies cannot log in at
+  all (`loginPharmacy` checks this before issuing a token) and, as defense in
+  depth, cannot use any authenticated pharmacy route even with an
+  already-issued token (`requireActivePharmacy` middleware checks the same
+  condition on every `/me...` request — the same dual-check pattern already
+  used for `status` alone before this change).
+- **Registration does NOT create a session.** No token is issued and no
+  pharmacy profile is returned. The response is only a generated, non-
+  sensitive `applicationReference` (e.g. `"BC-7F4K92"`) the applicant can use
+  later to check their status. `AuthContext` has no `registerPharmacy` method
+  as a result — `RegisterPage.tsx` calls `authService.registerPharmacy`
+  directly.
+- **Public, tokenless status lookup**: `POST /api/pharmacies/application-status`
+  with `{ applicationReference, email }` (both required — a bare reference
+  alone reveals nothing) returns only `{ verificationStatus }`. A non-matching
+  combination and a matching-reference-wrong-email attempt get the identical
+  generic 404, so this cannot be used to enumerate real references or emails.
+  Frontend: `pages/pharmacy/ApplicationStatusPage.tsx`.
 - **Registration default**: `status: "ACTIVE"` (unchanged default) +
-  `verificationStatus: "PENDING"` (new default) — so registration succeeds
-  exactly as before, just not yet publicly visible.
+  `verificationStatus: "PENDING"` (new default).
 - **`licenseNumber`**: required at registration. No format is validated — no
   license-number format for any jurisdiction is documented anywhere in this
   project, so only presence and a length bound (100 chars) are enforced rather
@@ -959,19 +968,27 @@ Resolved details:
   existing unresolved `logo` field exactly. **No storage provider was selected**
   — the Logo/Storage Decision below remains PENDING CONFIRMATION and blocks this
   field too, for the identical reason. No upload endpoint or UI exists for it.
-- **Admin review**: `PATCH /api/admin/pharmacies/:id/verification` (mirrors the
-  existing `/status` endpoint exactly), `GET /api/admin/pharmacies` accepts an
-  additional `verificationStatus` filter. No restricted transition model
-  (PENDING→APPROVED→REJECTED can move freely in any direction) — consistent
-  with `status` having no restricted transitions either.
+- **Admin review**: `PATCH /api/admin/pharmacies/:id/verification` accepts
+  only `{ verificationStatus: "APPROVED" }` or `{ verificationStatus:
+  "REJECTED" }` (PENDING is never a valid target, mirroring the Report
+  Decisions' `RESOLVED`/`REJECTED`-only restriction exactly) and enforces the
+  precondition that the application is currently `PENDING` — an already-
+  decided application cannot be re-decided through this endpoint. This uses
+  the same atomic `findOneAndUpdate` race-safety pattern as
+  `updateReportStatus` in `report.service.js`, for the identical reason (two
+  concurrent admin decisions on the same application must not let one
+  silently overwrite the other). `GET /api/admin/pharmacies` accepts an
+  additional `verificationStatus` filter (which does still accept all three
+  values, since admins need to filter by PENDING to find applications to
+  review).
 - **Existing pharmacies**: a one-off migration script
   (`backend/src/scripts/backfillPharmacyVerificationStatus.js`, mirroring the
   existing `resolveExistingPharmacyLocations.js` pattern) grandfathers every
   pharmacy that existed before this change to `verificationStatus: "APPROVED"`,
-  so they don't vanish from public search the moment this deploys. **This script
-  must be run once, manually, against production before/at deploy time** — it
-  is not automatic (no scheduler, matching the project's existing "no scheduler"
-  principle).
+  so they don't vanish from public search (or get locked out of their own
+  dashboards) the moment this deploys. **This script must be run once,
+  manually, against production before/at deploy time** — it is not automatic
+  (no scheduler, matching the project's existing "no scheduler" principle).
 
 ---
 

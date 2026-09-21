@@ -2,6 +2,7 @@ import { Route } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import LoginPage from "../pages/pharmacy/LoginPage";
 import RegisterPage from "../pages/pharmacy/RegisterPage";
+import ApplicationStatusPage from "../pages/pharmacy/ApplicationStatusPage";
 import DashboardPage from "../pages/pharmacy/DashboardPage";
 import ProfilePage from "../pages/pharmacy/ProfilePage";
 import MedicinesPage from "../pages/pharmacy/MedicinesPage";
@@ -11,6 +12,7 @@ export function pharmacyRoutes() {
   return [
     <Route key="pharmacy-login" path="/pharmacy/login" element={<LoginPage />} />,
     <Route key="pharmacy-register" path="/pharmacy/register" element={<RegisterPage />} />,
+    <Route key="pharmacy-application-status" path="/pharmacy/application-status" element={<ApplicationStatusPage />} />,
     <Route
       key="pharmacy-protected"
       element={<ProtectedRoute allowedRole="pharmacy" redirectTo="/pharmacy/login" />}

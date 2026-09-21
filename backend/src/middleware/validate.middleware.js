@@ -67,6 +67,27 @@ export function validatePharmacyRegister(req, res, next) {
   return next();
 }
 
+// Pharmacy Verification: public application-status lookup. Requires both
+// factors together — no format assumed on applicationReference beyond a
+// sane length bound, since it's an opaque generated code, not user input
+// with a defined shape.
+export function validateApplicationStatusLookup(req, res, next) {
+  const { applicationReference, email } = req.body || {};
+  const details = [];
+
+  if (!applicationReference || typeof applicationReference !== "string") {
+    details.push("applicationReference is required");
+  } else if (applicationReference.length > 20) {
+    details.push("applicationReference must be at most 20 characters");
+  }
+  if (!email || typeof email !== "string" || !EMAIL_RE.test(email)) {
+    details.push("a valid email is required");
+  }
+
+  if (details.length > 0) return next(fail(details));
+  return next();
+}
+
 export function validatePharmacyLogin(req, res, next) {
   const { email, password } = req.body || {};
   const details = [];
@@ -353,8 +374,10 @@ export function validatePharmacyStatusUpdate(req, res, next) {
 
 export function validatePharmacyVerificationUpdate(req, res, next) {
   const { verificationStatus } = req.body || {};
-  if (!verificationStatus || !PHARMACY_VERIFICATION_VALUES.includes(verificationStatus)) {
-    return next(fail([`verificationStatus must be one of: ${PHARMACY_VERIFICATION_VALUES.join(", ")}`]));
+  // PENDING is only ever a starting state, never a valid target — mirrors
+  // validateReportStatusUpdate's identical RESOLVED/REJECTED-only restriction.
+  if (!verificationStatus || !["APPROVED", "REJECTED"].includes(verificationStatus)) {
+    return next(fail(["verificationStatus must be APPROVED or REJECTED"]));
   }
   return next();
 }

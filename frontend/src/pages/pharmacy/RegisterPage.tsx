@@ -1,9 +1,15 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
+import { Link } from "react-router-dom";
+import * as authService from "../../services/auth.service";
 import ErrorMessage from "../../components/common/ErrorMessage";
 import { ApiRequestError } from "../../utils/api";
 import type { PharmacyRegisterPayload } from "../../types/auth.types";
+
+// Pharmacy Verification: registration does NOT create a session (no token is
+// issued — see auth.service.js on the backend). This page therefore calls
+// authService.registerPharmacy directly rather than going through
+// useAuth()/AuthContext, and shows an application reference instead of
+// redirecting to the dashboard.
 
 const initialForm: PharmacyRegisterPayload = {
   pharmacyName: "",
@@ -18,13 +24,11 @@ const initialForm: PharmacyRegisterPayload = {
 };
 
 function RegisterPage() {
-  const { registerPharmacy } = useAuth();
-  const navigate = useNavigate();
-
   const [form, setForm] = useState<PharmacyRegisterPayload>(initialForm);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [applicationReference, setApplicationReference] = useState<string | null>(null);
 
   function update<K extends keyof PharmacyRegisterPayload>(key: K, value: PharmacyRegisterPayload[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -36,8 +40,8 @@ function RegisterPage() {
     setDetails([]);
     setIsSubmitting(true);
     try {
-      await registerPharmacy(form);
-      navigate("/pharmacy/dashboard");
+      const result = await authService.registerPharmacy(form);
+      setApplicationReference(result.applicationReference);
     } catch (err) {
       if (err instanceof ApiRequestError) {
         setError(err.message);
@@ -48,6 +52,27 @@ function RegisterPage() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (applicationReference) {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 py-12 text-center">
+        <h1 className="text-2xl font-semibold text-gray-900">Application Submitted</h1>
+        <p className="text-sm text-gray-600">
+          Thanks for registering. An admin will review your pharmacy license before it appears in visitor search.
+          Save your application reference below — you'll need it, along with your email, to check your status.
+        </p>
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 font-mono text-lg font-semibold tracking-wide text-emerald-700">
+          {applicationReference}
+        </p>
+        <Link to="/pharmacy/application-status" className="font-medium text-emerald-700 hover:underline">
+          Check your application status
+        </Link>
+        <Link to="/pharmacy/login" className="text-sm text-gray-500 hover:underline">
+          Back to login
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -172,7 +197,7 @@ function RegisterPage() {
           disabled={isSubmitting}
           className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
         >
-          {isSubmitting ? "Registering..." : "Register"}
+          {isSubmitting ? "Submitting..." : "Submit Application"}
         </button>
       </form>
 

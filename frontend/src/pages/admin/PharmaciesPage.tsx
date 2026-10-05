@@ -20,6 +20,7 @@ function PharmaciesPage() {
   const [error, setError] = useState<string | null>(null);
   const [pharmacies, setPharmacies] = useState<AuthenticatedPharmacy[]>([]);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [viewingDocumentId, setViewingDocumentId] = useState<string | null>(null);
 
   async function load() {
     setState("loading");
@@ -74,6 +75,26 @@ function PharmaciesPage() {
       setPharmacies((prev) => prev.map((p) => (p._id === id ? updated : p)));
     } catch (err) {
       setActionError(err instanceof ApiRequestError ? err.message : "Failed to update verification status");
+    }
+  }
+
+  // Cloudinary License-Document Decision: fetches a fresh signed URL and
+  // opens it in a new tab immediately — never stored in component state
+  // beyond this one call, consistent with the backend never persisting it
+  // either. A PDF opens in the browser's own PDF viewer; an image opens as
+  // a plain image tab.
+  async function handleViewDocument(id: string) {
+    setActionError(null);
+    setViewingDocumentId(id);
+    try {
+      const result = await adminService.getPharmacyLicenseDocument(id);
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setActionError(
+        err instanceof ApiRequestError ? err.message : "Failed to load license document",
+      );
+    } finally {
+      setViewingDocumentId(null);
     }
   }
 
@@ -170,6 +191,14 @@ function PharmaciesPage() {
               <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
                 {pharmacy.verificationStatus === "PENDING" && (
                   <>
+                    <button
+                      type="button"
+                      onClick={() => handleViewDocument(pharmacy._id)}
+                      disabled={viewingDocumentId === pharmacy._id}
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      {viewingDocumentId === pharmacy._id ? "Loading..." : "View Document"}
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleVerificationChange(pharmacy._id, "APPROVED")}

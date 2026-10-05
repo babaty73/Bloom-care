@@ -8,6 +8,7 @@ import type {
   AdminReportListItem,
   PaginatedAdminReportListItems,
   AdminReportFilters,
+  LicenseDocumentViewResult,
 } from "../types/admin.types";
 
 export function getDashboard() {
@@ -37,6 +38,13 @@ export function updatePharmacyVerification(id: string, verificationStatus: Pharm
     method: "PATCH",
     body: { verificationStatus },
   });
+}
+
+// Cloudinary License-Document Decision: generates a fresh signed URL on
+// every call — never cache this response across calls, since the point is
+// that nothing viewable is persisted.
+export function getPharmacyLicenseDocument(id: string) {
+  return apiRequest<LicenseDocumentViewResult>(`/admin/pharmacies/${id}/license-document`);
 }
 
 export function deletePharmacy(id: string) {

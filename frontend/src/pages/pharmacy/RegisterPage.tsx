@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import * as authService from "../../services/auth.service";
 import ErrorMessage from "../../components/common/ErrorMessage";
@@ -11,7 +11,9 @@ import type { PharmacyRegisterPayload } from "../../types/auth.types";
 // useAuth()/AuthContext, and shows an application reference instead of
 // redirecting to the dashboard.
 
-const initialForm: PharmacyRegisterPayload = {
+type TextFields = Omit<PharmacyRegisterPayload, "licenseDocument">;
+
+const initialForm: TextFields = {
   pharmacyName: "",
   address: "",
   phone: "",
@@ -23,24 +25,61 @@ const initialForm: PharmacyRegisterPayload = {
   licenseNumber: "",
 };
 
+// Cloudinary License-Document Decision: mirrors the backend's own allowed
+// types/size limit (validate.middleware.js validateLicenseDocument,
+// upload.middleware.js) so the applicant gets immediate feedback instead of
+// waiting on a round trip for a mistake the backend would reject anyway.
+// This is a convenience check only — the backend re-validates independently
+// (magic-byte sniffing, not just extension/MIME) and is the real guard.
+const ALLOWED_LICENSE_DOCUMENT_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+const MAX_LICENSE_DOCUMENT_BYTES = 10 * 1024 * 1024;
+
 function RegisterPage() {
-  const [form, setForm] = useState<PharmacyRegisterPayload>(initialForm);
+  const [form, setForm] = useState<TextFields>(initialForm);
+  const [licenseDocument, setLicenseDocument] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [applicationReference, setApplicationReference] = useState<string | null>(null);
 
-  function update<K extends keyof PharmacyRegisterPayload>(key: K, value: PharmacyRegisterPayload[K]) {
+  function update<K extends keyof TextFields>(key: K, value: TextFields[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setFileError(null);
+    if (!file) {
+      setLicenseDocument(null);
+      return;
+    }
+    if (!ALLOWED_LICENSE_DOCUMENT_TYPES.includes(file.type)) {
+      setFileError("License document must be a JPG, PNG, or PDF file.");
+      setLicenseDocument(null);
+      return;
+    }
+    if (file.size > MAX_LICENSE_DOCUMENT_BYTES) {
+      setFileError("License document must be 10MB or smaller.");
+      setLicenseDocument(null);
+      return;
+    }
+    setLicenseDocument(file);
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setDetails([]);
+
+    if (!licenseDocument) {
+      setFileError("A license document (JPG, PNG, or PDF) is required.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const result = await authService.registerPharmacy(form);
+      const result = await authService.registerPharmacy({ ...form, licenseDocument });
       setApplicationReference(result.applicationReference);
     } catch (err) {
       if (err instanceof ApiRequestError) {
@@ -166,6 +205,25 @@ function RegisterPage() {
           <span className="text-xs font-normal text-gray-500">
             An admin will verify this before your pharmacy appears in visitor search.
           </span>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+          License Document
+          <input
+            type="file"
+            required
+            accept="image/jpeg,image/png,application/pdf"
+            onChange={handleFileChange}
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
+          />
+          <span className="text-xs font-normal text-gray-500">
+            A JPG, PNG, or PDF copy of your pharmacy license (max 10MB). An admin reviews this before approving your
+            application.
+          </span>
+          {fileError && <span className="text-xs font-normal text-red-600">{fileError}</span>}
+          {licenseDocument && !fileError && (
+            <span className="text-xs font-normal text-emerald-600">Selected: {licenseDocument.name}</span>
+          )}
         </label>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

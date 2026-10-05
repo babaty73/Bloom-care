@@ -1,4 +1,4 @@
-import { apiRequest } from "../utils/api";
+import { apiRequest, apiRequestMultipart } from "../utils/api";
 import type {
   PharmacyLoginResponse,
   AdminLoginResponse,
@@ -8,12 +8,23 @@ import type {
   AdminLoginPayload,
 } from "../types/auth.types";
 
+// Cloudinary License-Document Decision: registration now sends
+// multipart/form-data (text fields + the license document file) instead of
+// JSON, so it uses apiRequestMultipart rather than apiRequest.
 export function registerPharmacy(payload: PharmacyRegisterPayload) {
-  return apiRequest<PharmacyRegistrationResult>("/auth/pharmacy/register", {
-    method: "POST",
-    body: payload,
-    auth: false,
-  });
+  const formData = new FormData();
+  formData.append("pharmacyName", payload.pharmacyName);
+  formData.append("address", payload.address);
+  formData.append("phone", payload.phone);
+  formData.append("email", payload.email);
+  formData.append("password", payload.password);
+  formData.append("googleMapsLink", payload.googleMapsLink);
+  formData.append("openingTime", payload.openingTime);
+  formData.append("closingTime", payload.closingTime);
+  formData.append("licenseNumber", payload.licenseNumber);
+  formData.append("licenseDocument", payload.licenseDocument);
+
+  return apiRequestMultipart<PharmacyRegistrationResult>("/auth/pharmacy/register", formData);
 }
 
 export function loginPharmacy(payload: PharmacyLoginPayload) {

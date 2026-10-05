@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { ApiError } from "../utils/apiResponse.js";
 import { REPORT_REASON_VALUES, REPORT_STATUS_VALUES } from "../models/Report.js";
+import { sniffFileType } from "../utils/fileSignature.js";
 
 // Lightweight, dependency-free validation middleware.
 // Contract: docs/ARCHITECTURE.md Validation Contract — this layer checks required
@@ -61,6 +62,42 @@ export function validatePharmacyRegister(req, res, next) {
   } else {
     if (!/[A-Za-z]/.test(password)) details.push("password must contain at least one letter");
     if (!/[0-9]/.test(password)) details.push("password must contain at least one number");
+  }
+
+  if (details.length > 0) return next(fail(details));
+  return next();
+}
+
+// Cloudinary License-Document Decision (docs/IMPLEMENTATION_DECISIONS.md).
+// Runs AFTER multer (uploadLicenseDocumentFile) has populated req.file, and
+// AFTER validatePharmacyRegister has checked the other body fields. A
+// license document is required at registration — without one there is
+// nothing for an admin to review, and the whole verification feature is
+// meaningless.
+//
+// Defense in depth against MIME-type spoofing: the client-declared
+// `file.mimetype` is checked first (cheap, rejects obviously-wrong uploads
+// fast), but is NEVER trusted alone — the actual file bytes are sniffed via
+// sniffFileType() and must also resolve to one of the allowed types. A file
+// with a forged Content-Type but non-matching bytes (or vice versa) is
+// rejected either way.
+const ALLOWED_LICENSE_MIME_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+
+export function validateLicenseDocument(req, res, next) {
+  const file = req.file;
+  const details = [];
+
+  if (!file) {
+    return next(fail(["licenseDocument is required"]));
+  }
+
+  if (!ALLOWED_LICENSE_MIME_TYPES.includes(file.mimetype)) {
+    details.push("licenseDocument must be a JPG, PNG, or PDF file");
+  } else {
+    const sniffed = sniffFileType(file.buffer);
+    if (!sniffed || !ALLOWED_LICENSE_MIME_TYPES.includes(sniffed)) {
+      details.push("licenseDocument does not appear to be a valid JPG, PNG, or PDF file");
+    }
   }
 
   if (details.length > 0) return next(fail(details));

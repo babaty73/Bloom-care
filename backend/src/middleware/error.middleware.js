@@ -1,3 +1,4 @@
+import multer from "multer";
 import { ApiError, sendError } from "../utils/apiResponse.js";
 
 // Centralized error handler. Contract: docs/ARCHITECTURE.md error envelope + HTTP status contract.
@@ -32,6 +33,27 @@ export function errorMiddleware(err, req, res, next) {
       code: field === "email" ? "DUPLICATE_EMAIL" : "RESOURCE_NOT_FOUND",
       message: `${field} already in use`,
       details: [],
+    });
+  }
+
+  // Multer errors (license-document upload) -> clean 4xx responses.
+  // Contract: Cloudinary License-Document Decision — a too-large file or a
+  // malformed multipart request is a routine client-caused condition, same
+  // category as the body-parser entity errors below, not a server bug.
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return sendError(res, {
+        statusCode: 413,
+        code: "PAYLOAD_TOO_LARGE",
+        message: "licenseDocument must be 10MB or smaller",
+        details: [],
+      });
+    }
+    return sendError(res, {
+      statusCode: 400,
+      code: "VALIDATION_ERROR",
+      message: "licenseDocument could not be processed",
+      details: [err.message],
     });
   }
 

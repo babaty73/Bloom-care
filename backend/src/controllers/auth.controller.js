@@ -7,17 +7,23 @@ export async function registerPharmacy(req, res, next) {
   try {
     const { pharmacyName, address, phone, email, password, googleMapsLink, openingTime, closingTime, licenseNumber } =
       req.body;
-    const result = await authService.registerPharmacy({
-      pharmacyName,
-      address,
-      phone,
-      email,
-      password,
-      googleMapsLink,
-      openingTime,
-      closingTime,
-      licenseNumber,
-    });
+    // req.file is populated by the uploadLicenseDocumentFile multer
+    // middleware (auth.routes.js), which runs before validateLicenseDocument
+    // and this controller.
+    const result = await authService.registerPharmacy(
+      {
+        pharmacyName,
+        address,
+        phone,
+        email,
+        password,
+        googleMapsLink,
+        openingTime,
+        closingTime,
+        licenseNumber,
+      },
+      req.file,
+    );
     // 201: an application resource was created. No token/session is issued —
     // see auth.service.js registerPharmacy (Pharmacy Verification).
     return sendSuccess(res, {

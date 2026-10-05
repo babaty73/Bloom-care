@@ -58,6 +58,20 @@ export async function updatePharmacyVerification(req, res, next) {
   }
 }
 
+export async function getPharmacyLicenseDocument(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await adminService.getLicenseDocumentViewUrl(id);
+    return sendSuccess(res, {
+      statusCode: 200,
+      data: result,
+      message: "License document view URL generated successfully",
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 export async function deletePharmacy(req, res, next) {
   try {
     const { id } = req.params;

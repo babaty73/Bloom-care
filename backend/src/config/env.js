@@ -11,6 +11,13 @@ const jwtExpiresIn = process.env.JWT_EXPIRES_IN || "7d";
 const bcryptSaltRounds = Number(process.env.BCRYPT_SALT_ROUNDS || 12);
 const geoapifyApiKey = process.env.GEOAPIFY_API_KEY || "";
 
+// Cloudinary License-Document Decision (docs/IMPLEMENTATION_DECISIONS.md) —
+// backend-only credentials. Never read a VITE_-prefixed equivalent; the
+// frontend never talks to Cloudinary directly.
+const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME || "";
+const cloudinaryApiKey = process.env.CLOUDINARY_API_KEY || "";
+const cloudinaryApiSecret = process.env.CLOUDINARY_API_SECRET || "";
+
 // Comma-separated list of allowed frontend origins (usually just one). Each
 // value is trimmed and has any trailing slash stripped — browsers never send
 // a trailing slash in the Origin header, so a CORS_ORIGIN value accidentally
@@ -29,6 +36,9 @@ const config = {
   bcryptSaltRounds,
   geoapifyApiKey,
   corsOrigin,
+  cloudinaryCloudName,
+  cloudinaryApiKey,
+  cloudinaryApiSecret,
 };
 
 export default config;

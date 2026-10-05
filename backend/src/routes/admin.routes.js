@@ -35,6 +35,11 @@ router.patch(
   validatePharmacyVerificationUpdate,
   adminController.updatePharmacyVerification,
 );
+router.get(
+  "/pharmacies/:id/license-document",
+  validateObjectIdParam("id"),
+  adminController.getPharmacyLicenseDocument,
+);
 router.delete("/pharmacies/:id", validateObjectIdParam("id"), adminController.deletePharmacy);
 
 router.delete("/medicines/:id", validateObjectIdParam("id"), adminController.deleteMedicine);

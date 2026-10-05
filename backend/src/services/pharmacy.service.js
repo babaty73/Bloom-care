@@ -4,6 +4,7 @@ import Report from "../models/Report.js";
 import { ApiError } from "../utils/apiResponse.js";
 import { isPharmacyOpen } from "../utils/pharmacyStatus.js";
 import { resolvePharmacyLocation } from "../utils/googleMaps.js";
+import { getSignedLicenseDocumentUrl } from "../utils/cloudinaryStorage.js";
 
 function toPublicPharmacy(pharmacyDoc) {
   const pharmacy = pharmacyDoc.toObject ? pharmacyDoc.toObject() : pharmacyDoc;
@@ -11,6 +12,12 @@ function toPublicPharmacy(pharmacyDoc) {
   // location is internal-only (Nearby Pharmacy / Distance decision) — never
   // exposed in API responses, including to the pharmacy itself.
   delete pharmacy.location;
+  // Cloudinary License-Document Decision: must never appear in ANY API
+  // response, including the pharmacy's own profile (GET/PATCH /pharmacies/me)
+  // and the admin pharmacy-listing endpoint, both of which use this same
+  // serializer. Admins reach it only through the dedicated signed-URL
+  // endpoint (getLicenseDocumentViewUrl below).
+  delete pharmacy.licenseDocument;
   return {
     ...pharmacy,
     isOpen: isPharmacyOpen(pharmacy.openingTime, pharmacy.closingTime),
@@ -28,8 +35,10 @@ function toVisitorPharmacy(pharmacyDoc) {
   delete pharmacy.email;
   // License fields are verification-only, never public — regardless of
   // approval state (see Pharmacy Verification note in models/Pharmacy.js).
+  // licenseDocument is already stripped by toPublicPharmacy() above; only
+  // licenseNumber needs stripping here additionally (toPublicPharmacy keeps
+  // it, since the pharmacy's own profile view is allowed to see it).
   delete pharmacy.licenseNumber;
-  delete pharmacy.licenseDocumentUrl;
   return pharmacy;
 }
 
@@ -181,6 +190,30 @@ export async function deletePharmacyById(pharmacyId) {
     throw new ApiError(404, "RESOURCE_NOT_FOUND", "Pharmacy not found");
   }
   await pharmacy.deleteOne();
+}
+
+/**
+ * Cloudinary License-Document Decision — admin-only, on-demand signed URL to
+ * view a pharmacy's license document. The URL is generated fresh on every
+ * call and is NEVER persisted (not cached, not stored on the Pharmacy
+ * document) — see cloudinaryStorage.js getSignedLicenseDocumentUrl for the
+ * documented limitation on how long that URL remains usable.
+ *
+ * Returns 404 (not a distinct "no document" status) both when the pharmacy
+ * does not exist and when it exists but has no license document, so this
+ * endpoint cannot be used to distinguish the two — consistent with how
+ * other lookups in this codebase avoid leaking existence information.
+ */
+export async function getLicenseDocumentViewUrl(pharmacyId) {
+  const pharmacy = await Pharmacy.findById(pharmacyId);
+  if (!pharmacy || !pharmacy.licenseDocument) {
+    throw new ApiError(404, "RESOURCE_NOT_FOUND", "No license document found for this pharmacy");
+  }
+
+  const { publicId, resourceType, format, originalFilename } = pharmacy.licenseDocument;
+  const url = getSignedLicenseDocumentUrl(publicId, resourceType, format);
+
+  return { url, resourceType, format, originalFilename };
 }
 
 export async function countPharmaciesByStatus() {

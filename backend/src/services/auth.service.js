@@ -6,6 +6,7 @@ import { signToken } from "../utils/jwt.js";
 import { ApiError } from "../utils/apiResponse.js";
 import { resolvePharmacyLocation } from "../utils/googleMaps.js";
 import { generateApplicationReferenceCandidate } from "../utils/applicationReference.js";
+import { uploadLicenseDocument, deleteLicenseDocument } from "../utils/cloudinaryStorage.js";
 
 // Contract: docs/ARCHITECTURE.md Authentication Contract, docs/IMPLEMENTATION_DECISIONS.md.
 // bcrypt work factor 12. JWT payload is exactly { sub, role }. No refresh tokens.
@@ -16,6 +17,11 @@ function toPublicPharmacy(pharmacyDoc) {
   // location is internal-only (Nearby Pharmacy / Distance decision) — never
   // exposed in API responses, including to the pharmacy itself.
   delete pharmacy.location;
+  // Cloudinary License-Document Decision: the license document (even just
+  // its Cloudinary publicId) must never appear in any API response, public
+  // or self-profile. Admins reach it only through the dedicated signed-URL
+  // endpoint (see pharmacy.service.js getLicenseDocumentViewUrl).
+  delete pharmacy.licenseDocument;
   return pharmacy;
 }
 
@@ -39,17 +45,10 @@ async function generateUniqueApplicationReference() {
  * later (see checkApplicationStatus below) — no token, no pharmacy profile
  * data, nothing that would let the frontend treat this as a successful login.
  */
-export async function registerPharmacy({
-  pharmacyName,
-  address,
-  phone,
-  email,
-  password,
-  googleMapsLink,
-  openingTime,
-  closingTime,
-  licenseNumber,
-}) {
+export async function registerPharmacy(
+  { pharmacyName, address, phone, email, password, googleMapsLink, openingTime, closingTime, licenseNumber },
+  licenseDocumentFile,
+) {
   const normalizedEmail = email.toLowerCase().trim();
 
   const existing = await Pharmacy.findOne({ email: normalizedEmail });
@@ -71,22 +70,50 @@ export async function registerPharmacy({
     console.warn(`[pharmacy location] could not resolve location for new pharmacy: ${err.message}`);
   }
 
+  // Cloudinary License-Document Decision: UNLIKE location resolution above,
+  // this is NOT best-effort. validateLicenseDocument (middleware) already
+  // guarantees licenseDocumentFile is present and is a real JPG/PNG/PDF by
+  // this point, but the actual upload call to Cloudinary is still an
+  // external-service call that can fail (network issue, misconfigured
+  // credentials, Cloudinary outage). If it fails, registration must fail
+  // outright — the whole point of this feature is that every PENDING
+  // application has a real document for an admin to review, so silently
+  // continuing without one would defeat the feature.
+  const uploadResult = await uploadLicenseDocument(licenseDocumentFile.buffer);
+
   const applicationReference = await generateUniqueApplicationReference();
 
-  const pharmacy = await Pharmacy.create({
-    pharmacyName,
-    address,
-    phone,
-    email: normalizedEmail,
-    passwordHash,
-    googleMapsLink,
-    openingTime,
-    closingTime,
-    location,
-    licenseNumber,
-    verificationStatus: "PENDING",
-    applicationReference,
-  });
+  let pharmacy;
+  try {
+    pharmacy = await Pharmacy.create({
+      pharmacyName,
+      address,
+      phone,
+      email: normalizedEmail,
+      passwordHash,
+      googleMapsLink,
+      openingTime,
+      closingTime,
+      location,
+      licenseNumber,
+      licenseDocument: {
+        publicId: uploadResult.publicId,
+        secureUrl: uploadResult.secureUrl,
+        resourceType: uploadResult.resourceType,
+        format: uploadResult.format,
+        originalFilename: licenseDocumentFile.originalname || null,
+      },
+      verificationStatus: "PENDING",
+      applicationReference,
+    });
+  } catch (err) {
+    // Rollback: the Cloudinary upload succeeded but the Mongo document could
+    // not be created (validation error, duplicate key race, etc.) — delete
+    // the now-orphaned asset rather than leaving it in Cloudinary forever
+    // with nothing in the database pointing to it.
+    await deleteLicenseDocument(uploadResult.publicId, uploadResult.resourceType);
+    throw err;
+  }
 
   return { applicationReference: pharmacy.applicationReference };
 }

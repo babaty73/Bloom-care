@@ -28,6 +28,10 @@ export async function updatePharmacyVerification(pharmacyId, verificationStatus)
   return pharmacyService.updatePharmacyVerification(pharmacyId, verificationStatus);
 }
 
+export async function getLicenseDocumentViewUrl(pharmacyId) {
+  return pharmacyService.getLicenseDocumentViewUrl(pharmacyId);
+}
+
 export async function deletePharmacy(pharmacyId) {
   return pharmacyService.deletePharmacyById(pharmacyId);
 }

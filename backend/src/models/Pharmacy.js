@@ -99,22 +99,45 @@ const pharmacySchema = new mongoose.Schema(
       // specification/docs do not define a license-number format for any
       // jurisdiction, and inventing one (e.g. an Ethiopian-specific pattern)
       // was explicitly out of scope for this task.
+      //
+      // NOT schema-`required`: Mongoose re-runs `required` validators on
+      // every `.save()`, not just on creation. Making this schema-required
+      // would break any pre-existing pharmacy document that predates this
+      // field the moment an unrelated update (e.g. an admin status change)
+      // calls `.save()` on it. "Required at registration" is instead
+      // enforced purely in validate.middleware.js (validatePharmacyRegister),
+      // which only runs on the registration route.
       type: String,
-      required: [true, "licenseNumber is required"],
+      required: false,
       trim: true,
       maxlength: [100, "licenseNumber must be at most 100 characters"],
+      default: null,
     },
-    // Plumbing-only reference field, deliberately mirroring `logo` above: the
-    // Logo/Storage Decision remains PENDING CONFIRMATION project-wide, and that
-    // decision blocks selecting a storage provider for THIS field too (a
-    // license document has the exact same "where do we put the file" problem
-    // as a logo). No upload endpoint or storage integration exists anywhere in
-    // this codebase for this field — nothing currently sets it. It exists so
-    // that whichever storage mechanism gets agreed on later has a field to
-    // write the resulting reference into, without a schema migration at that
-    // point.
-    licenseDocumentUrl: {
-      type: String,
+    // Cloudinary License-Document Decision (docs/IMPLEMENTATION_DECISIONS.md) —
+    // replaces the old plumbing-only `licenseDocumentUrl` placeholder now that
+    // Cloudinary storage is finalized/DECIDED. Stores just enough to both
+    // generate a signed admin-only viewing URL on demand (publicId,
+    // resourceType, format) and to delete the asset later (publicId) —
+    // deliberately NOT the raw secureUrl-as-a-working-link, since the asset is
+    // uploaded with Cloudinary `type: "authenticated"` and has no working
+    // public URL anyway; secureUrl is kept only for logging/debugging
+    // reference, never served directly to any client.
+    //
+    // Same "not schema-required" reasoning as licenseNumber above — enforced
+    // at the registration route only (validate.middleware.js /
+    // auth.service.js), not via Mongoose `required`, so it never breaks
+    // `.save()` on a pharmacy document created before this field existed.
+    licenseDocument: {
+      type: new mongoose.Schema(
+        {
+          publicId: { type: String, required: true },
+          secureUrl: { type: String, required: true },
+          resourceType: { type: String, required: true },
+          format: { type: String, required: true },
+          originalFilename: { type: String, required: false, default: null },
+        },
+        { _id: false },
+      ),
       required: false,
       default: null,
     },

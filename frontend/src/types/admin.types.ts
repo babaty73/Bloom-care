@@ -17,6 +17,17 @@ export interface PaginatedPharmacies {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+// Cloudinary License-Document Decision: result of the admin-only
+// GET /api/admin/pharmacies/:id/license-document endpoint. `url` is a
+// freshly-generated signed Cloudinary URL — never cached/stored by the
+// frontend beyond the current viewing action.
+export interface LicenseDocumentViewResult {
+  url: string;
+  resourceType: string;
+  format: string;
+  originalFilename: string | null;
+}
+
 export type AdminReportStatus = "PENDING" | "RESOLVED" | "REJECTED";
 
 // Describes GET /api/pharmacies/me/reports (pharmacy's own report view).

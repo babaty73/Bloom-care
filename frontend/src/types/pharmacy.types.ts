@@ -4,9 +4,13 @@ export type Pharmacy = AuthenticatedPharmacy;
 
 // Public (unauthenticated) pharmacy response shape. Contract: docs/IMPLEMENTATION_DECISIONS.md
 // §7 "Public vs private pharmacy fields" — email is never included here, unlike the
-// pharmacy's own private profile (Pharmacy, above). License fields are also
-// never public (Pharmacy Verification — verification info, not for visitors).
-export type PublicPharmacyProfile = Omit<Pharmacy, "email" | "licenseNumber" | "licenseDocumentUrl">;
+// pharmacy's own private profile (Pharmacy, above). licenseNumber is also never
+// public (Pharmacy Verification — verification info, not for visitors).
+// licenseDocument never appears on AuthenticatedPharmacy at all (Cloudinary
+// License-Document Decision — stripped server-side from every response,
+// public or private; admins reach it only via the dedicated signed-URL
+// endpoint), so there is nothing to Omit for it here.
+export type PublicPharmacyProfile = Omit<Pharmacy, "email" | "licenseNumber">;
 
 // Nearby Pharmacy / Distance decision — location-resolution feedback (Domain 4).
 // Only the pharmacy's own profile views (GET/PATCH /pharmacies/me) include this

@@ -131,3 +131,29 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   return json.data;
 }
+
+// Cloudinary License-Document Decision: a dedicated multipart/form-data path,
+// separate from apiRequest() above, which always JSON-encodes its body. Used
+// only by pharmacy registration (the one request that sends a file). Browser
+// `fetch` sets the correct multipart boundary header automatically when given
+// a FormData body — manually setting Content-Type here would break it.
+export async function apiRequestMultipart<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const json = (await response.json().catch(() => null)) as ApiSuccess<T> | ApiErrorResponse | null;
+
+  if (!response.ok || !json || json.success === false) {
+    const errorJson = json as ApiErrorResponse | null;
+    throw new ApiRequestError(
+      response.status,
+      errorJson?.error?.code || "INTERNAL_SERVER_ERROR",
+      errorJson?.message || "Something went wrong",
+      errorJson?.error?.details || [],
+    );
+  }
+
+  return json.data;
+}

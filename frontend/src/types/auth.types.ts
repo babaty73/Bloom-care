@@ -20,10 +20,11 @@ export interface AuthenticatedPharmacy {
   // on this type for accuracy/completeness, not because it varies here.
   verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
   licenseNumber: string;
-  // Plumbing-only (see backend/src/models/Pharmacy.js) — always null until a
-  // storage provider is decided and an upload flow is built. Not rendered
-  // anywhere in the UI yet.
-  licenseDocumentUrl: string | null;
+  // Cloudinary License-Document Decision: the license document itself is
+  // NEVER included in any API response, including the pharmacy's own
+  // profile (see backend auth.service.js/pharmacy.service.js
+  // toPublicPharmacy, which strips it) — admins reach it only through the
+  // dedicated signed-URL endpoint. No field for it exists on this type.
   isOpen: boolean;
   createdAt: string;
   updatedAt: string;
@@ -64,6 +65,10 @@ export interface PharmacyRegisterPayload {
   openingTime: string;
   closingTime: string;
   licenseNumber: string;
+  // Cloudinary License-Document Decision: the actual file, sent as
+  // multipart/form-data (see services/auth.service.ts registerPharmacy and
+  // utils/api.ts apiRequestMultipart) — never JSON-encoded.
+  licenseDocument: File;
 }
 
 export interface ApplicationStatusLookupPayload {

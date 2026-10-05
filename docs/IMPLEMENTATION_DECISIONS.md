@@ -964,10 +964,11 @@ Resolved details:
   license-number format for any jurisdiction is documented anywhere in this
   project, so only presence and a length bound (100 chars) are enforced rather
   than inventing one.
-- **`licenseDocumentUrl`**: plumbing-only reference field, mirroring the
-  existing unresolved `logo` field exactly. **No storage provider was selected**
-  — the Logo/Storage Decision below remains PENDING CONFIRMATION and blocks this
-  field too, for the identical reason. No upload endpoint or UI exists for it.
+- **`licenseDocument`**: the license document itself is now a real, required
+  upload at registration, stored via Cloudinary. See the **Cloudinary
+  License-Document Decision** section below for the full, now-DECIDED design
+  (replaces the earlier plumbing-only `licenseDocumentUrl` placeholder
+  referenced in older revisions of this doc).
 - **Admin review**: `PATCH /api/admin/pharmacies/:id/verification` accepts
   only `{ verificationStatus: "APPROVED" }` or `{ verificationStatus:
   "REJECTED" }` (PENDING is never a valid target, mirroring the Report
@@ -1053,6 +1054,110 @@ If actual logo upload is implemented, the developers must agree on the storage m
 Claude must not independently select Cloudinary, local filesystem storage, S3, another cloud provider, or another storage service.
 
 If no storage decision is confirmed, logo-upload functionality may remain unimplemented while the optional `logo` field and architecture remain intact.
+
+---
+
+# Cloudinary License-Document Decision
+
+## Status: DECIDED
+
+Builds on the Pharmacy Verification Decision above, which required a
+`licenseNumber` but left the actual license *document* as an unimplemented
+plumbing-only field (`licenseDocumentUrl`) because no storage provider had
+been agreed. A storage provider has now been explicitly agreed: **Cloudinary**.
+This decision is independent of the still-PENDING-CONFIRMATION Logo/Storage
+Decision above — a pharmacy `logo` is a cosmetic, optional, low-sensitivity
+image, while a license document is sensitive verification evidence that must
+never be publicly reachable; the two are deliberately solved differently and
+one being decided does not resolve the other.
+
+## 1. Storage mechanism
+
+- Provider: **Cloudinary**, via server-side signed upload only
+  (`cloudinary.uploader.upload_stream` through the Node SDK). There is no
+  unsigned/client-side upload preset anywhere in this codebase — the browser
+  never talks to Cloudinary directly, and the Cloudinary API secret never
+  leaves the backend. Credentials (`CLOUDINARY_CLOUD_NAME`,
+  `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) are backend-only env vars,
+  never `VITE_`-prefixed.
+- Assets are uploaded with `type: "authenticated"` — the asset is **private**;
+  its `secure_url` is not a working public URL. Viewing it requires a signed
+  URL minted on demand (see §4).
+- Dedicated folder: `bloom-care/licenses`, never mixed with any other asset
+  type. No client-supplied `public_id` — Cloudinary generates one, so no
+  pharmacy can collide with or overwrite another's document.
+- File constraints, enforced on the backend (never trusting the frontend's
+  own pre-check, which exists only for faster user feedback): JPG, PNG, or
+  PDF; 10MB maximum; single file. The client-declared MIME type is checked
+  first, then the actual file bytes are sniffed (`utils/fileSignature.js`,
+  magic-byte signatures for JPEG/PNG/PDF) and must independently confirm the
+  same type — defeats a spoofed `Content-Type`.
+- Multer (`middleware/upload.middleware.js`) uses `memoryStorage()` — the file
+  buffer is held in memory only long enough to stream to Cloudinary; it is
+  never written to local disk.
+
+## 2. Schema
+
+`Pharmacy.licenseDocument` is a sub-object: `{ publicId, secureUrl,
+resourceType, format, originalFilename }`. Deliberately **not** Mongoose
+`required` (same reasoning as `licenseNumber`): `required` re-validates on
+every `.save()`, which would break any pharmacy document created before this
+field existed the moment an unrelated update (e.g. an admin status change)
+triggers a save. "Required at registration" is enforced purely in
+`validate.middleware.js`, scoped to the registration route only.
+
+## 3. Registration flow
+
+- The license document is **required** at registration — without one there
+  is nothing for an admin to review, so the entire verification feature would
+  be meaningless. Unlike Nearby-Pharmacy location resolution (which is
+  deliberately best-effort/non-blocking), a failed Cloudinary upload **fails
+  registration outright**.
+- If the Cloudinary upload succeeds but the subsequent `Pharmacy.create()`
+  call fails (validation error, duplicate-key race, etc.), the now-orphaned
+  Cloudinary asset is deleted (`deleteLicenseDocument`) before the error is
+  rethrown — no asset is ever left in Cloudinary with nothing in MongoDB
+  pointing to it.
+- Registration continues to return only `{ applicationReference }` — no
+  token, no pharmacy profile, no document reference of any kind (Pharmacy
+  Verification Decision, unchanged by this addition).
+
+## 4. Admin-only viewing
+
+- `GET /api/admin/pharmacies/:id/license-document` (admin-authenticated,
+  same `authMiddleware` + `requireRole("admin")` as every other admin route)
+  generates a **fresh signed URL on every call**
+  (`cloudinary.url(..., { sign_url: true, secure: true })`) and never
+  persists it anywhere — not cached, not stored on the Pharmacy document.
+- Known limitation (documented rather than glossed over): `sign_url: true`
+  cryptographically signs the URL's parameters, but Cloudinary only enforces
+  genuine *time-limited* expiry for accounts with "strict transformations" /
+  authenticated-asset delivery fully enabled at the account level. Without
+  that account-level setting, this signed URL functions as a long-lived
+  capability URL rather than a short-TTL token — though the asset still has
+  **no public URL at all** without going through this endpoint first. If
+  stricter expiry is required later, it is an account-configuration change,
+  not a code change.
+
+## 5. Public-exposure rules
+
+`licenseDocument` is stripped from **every** API response by the shared
+`toPublicPharmacy`/`toVisitorPharmacy` serializers (both
+`services/auth.service.js` and `services/pharmacy.service.js` have their own
+copies, and both strip it) — this includes the pharmacy's own profile
+(`GET/PATCH /pharmacies/me`), the admin pharmacy-listing endpoint, and the
+public application-status lookup. The only way to reach the document's
+contents is the dedicated admin endpoint in §4.
+
+## 6. Migration / existing pharmacies
+
+Pharmacies approved before this change (via the
+`backfillPharmacyVerificationStatus.js` script) have `licenseDocument: null`
+and remain unaffected — the field is not schema-required (see §2), so their
+existing documents continue to `.save()` normally, and no document is
+invented or backfilled for them. The admin license-document endpoint returns
+`404 RESOURCE_NOT_FOUND` for a pharmacy with no document, identical to a
+pharmacy that doesn't exist at all (no existence-leaking distinction).
 
 ---
 

@@ -116,12 +116,15 @@ const pharmacySchema = new mongoose.Schema(
     // Cloudinary License-Document Decision (docs/IMPLEMENTATION_DECISIONS.md) —
     // replaces the old plumbing-only `licenseDocumentUrl` placeholder now that
     // Cloudinary storage is finalized/DECIDED. Stores just enough to both
-    // generate a signed admin-only viewing URL on demand (publicId,
-    // resourceType, format) and to delete the asset later (publicId) —
-    // deliberately NOT the raw secureUrl-as-a-working-link, since the asset is
-    // uploaded with Cloudinary `type: "authenticated"` and has no working
-    // public URL anyway; secureUrl is kept only for logging/debugging
-    // reference, never served directly to any client.
+    // generate a fresh, short-lived, token-authenticated admin-only viewing
+    // URL on demand (publicId, resourceType, format) and to delete the asset
+    // later (publicId). Deliberately does NOT store a secureUrl: the asset is
+    // uploaded with Cloudinary `type: "authenticated"`, so Cloudinary's own
+    // `secure_url` is never a working link on its own anyway, and the
+    // application always regenerates the actual viewing URL dynamically from
+    // publicId/resourceType/format (utils/cloudinaryStorage.js
+    // getSignedLicenseDocumentUrl) rather than ever reading a stored one —
+    // persisting it would just be unused dead data with no purpose.
     //
     // Same "not schema-required" reasoning as licenseNumber above — enforced
     // at the registration route only (validate.middleware.js /
@@ -131,7 +134,6 @@ const pharmacySchema = new mongoose.Schema(
       type: new mongoose.Schema(
         {
           publicId: { type: String, required: true },
-          secureUrl: { type: String, required: true },
           resourceType: { type: String, required: true },
           format: { type: String, required: true },
           originalFilename: { type: String, required: false, default: null },

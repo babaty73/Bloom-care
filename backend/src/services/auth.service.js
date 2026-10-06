@@ -98,7 +98,6 @@ export async function registerPharmacy(
       licenseNumber,
       licenseDocument: {
         publicId: uploadResult.publicId,
-        secureUrl: uploadResult.secureUrl,
         resourceType: uploadResult.resourceType,
         format: uploadResult.format,
         originalFilename: licenseDocumentFile.originalname || null,

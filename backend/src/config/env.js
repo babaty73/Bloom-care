@@ -17,6 +17,15 @@ const geoapifyApiKey = process.env.GEOAPIFY_API_KEY || "";
 const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME || "";
 const cloudinaryApiKey = process.env.CLOUDINARY_API_KEY || "";
 const cloudinaryApiSecret = process.env.CLOUDINARY_API_SECRET || "";
+// Separate from cloudinaryApiSecret above — this is the "Token-based
+// authentication" signing key from the Cloudinary account's Security
+// settings (Settings -> Security -> Token-based authentication), used ONLY
+// to generate genuinely time-limited (`exp`-bound) signed URLs for viewing
+// an authenticated/private asset. Token-based authentication must also be
+// toggled ON for the account in that same settings page, or Cloudinary's CDN
+// will not actually enforce the token's expiry. See
+// utils/cloudinaryStorage.js getSignedLicenseDocumentUrl.
+const cloudinaryAuthTokenKey = process.env.CLOUDINARY_AUTH_TOKEN_KEY || "";
 
 // Comma-separated list of allowed frontend origins (usually just one). Each
 // value is trimmed and has any trailing slash stripped — browsers never send
@@ -39,6 +48,7 @@ const config = {
   cloudinaryCloudName,
   cloudinaryApiKey,
   cloudinaryApiSecret,
+  cloudinaryAuthTokenKey,
 };
 
 export default config;

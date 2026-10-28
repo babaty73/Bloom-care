@@ -1,5 +1,6 @@
 import multer from "multer";
 import { ApiError, sendError } from "../utils/apiResponse.js";
+import { logger } from "../utils/logger.js";
 
 // Centralized error handler. Contract: docs/ARCHITECTURE.md error envelope + HTTP status contract.
 // Never leak stack traces, secrets, or password hashes in the response.
@@ -84,7 +85,12 @@ export function errorMiddleware(err, req, res, next) {
     });
   }
 
-  console.error(err);
+  logger.error("Unhandled backend error", {
+    message: err.message,
+    stack: err.stack,
+    method: req.method,
+    path: req.originalUrl,
+  });
 
   return sendError(res, {
     statusCode: 500,

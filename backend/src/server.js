@@ -2,6 +2,7 @@ import app from "./app.js";
 import config from "./config/env.js";
 import { connectDatabase, disconnectDatabase } from "./config/db.js";
 import { assertProductionReady } from "./config/productionChecks.js";
+import { logger } from "./utils/logger.js";
 
 async function startServer() {
   try {
@@ -12,23 +13,17 @@ async function startServer() {
     await connectDatabase();
 
     const server = app.listen(config.port, () => {
-      console.log(`Bloom-Care backend running on port ${config.port}`);
+      logger.info("Bloom-Care backend started", { port: config.port, environment: process.env.NODE_ENV || "development" });
     });
 
-    // Minimal graceful shutdown for SIGTERM/SIGINT. Render sends SIGTERM
-    // before restarting or redeploying a service; without handling it,
-    // in-flight requests get cut off abruptly instead of finishing.
     let isShuttingDown = false;
     async function shutdown(signal) {
       if (isShuttingDown) return;
       isShuttingDown = true;
-      console.log(`${signal} received, shutting down gracefully...`);
+      logger.info("Shutdown initiated", { signal });
 
-      // Safety net: if something hangs, don't let the process linger
-      // forever — most hosts force-kill after a grace period anyway, but
-      // this ensures a clean, predictable exit regardless.
       const forceExitTimer = setTimeout(() => {
-        console.error("Graceful shutdown timed out; forcing exit.");
+        logger.error("Graceful shutdown timed out; forcing exit.");
         process.exit(1);
       }, 10000);
       forceExitTimer.unref();
@@ -37,9 +32,11 @@ async function startServer() {
         try {
           await disconnectDatabase();
         } catch (err) {
-          console.error("Error closing MongoDB connection during shutdown:", err);
+          logger.error("Error closing MongoDB connection during shutdown", {
+            message: err.message,
+          });
         }
-        console.log("Shutdown complete.");
+        logger.info("Shutdown complete");
         process.exit(0);
       });
     }
@@ -47,7 +44,10 @@ async function startServer() {
     process.on("SIGTERM", () => shutdown("SIGTERM"));
     process.on("SIGINT", () => shutdown("SIGINT"));
   } catch (error) {
-    console.error("Failed to start Bloom-Care backend:", error);
+    logger.error("Failed to start Bloom-Care backend", {
+      message: error.message,
+      stack: error.stack,
+    });
     process.exit(1);
   }
 }

@@ -39,7 +39,7 @@ export class ApiRequestError extends Error {
 
 function getStorageItem(key: string): string | null {
   try {
-    return window.localStorage.getItem(key);
+    return window.sessionStorage.getItem(key);
   } catch {
     return null;
   }
@@ -47,7 +47,7 @@ function getStorageItem(key: string): string | null {
 
 function setStorageItem(key: string, value: string): void {
   try {
-    window.localStorage.setItem(key, value);
+    window.sessionStorage.setItem(key, value);
   } catch {
     // ignore storage issues in private browsing or restricted environments
   }
@@ -55,7 +55,7 @@ function setStorageItem(key: string, value: string): void {
 
 function removeStorageItem(key: string): void {
   try {
-    window.localStorage.removeItem(key);
+    window.sessionStorage.removeItem(key);
   } catch {
     // ignore removal errors
   }

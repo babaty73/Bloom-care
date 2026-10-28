@@ -1,9 +1,14 @@
 import app from "./app.js";
 import config from "./config/env.js";
 import { connectDatabase, disconnectDatabase } from "./config/db.js";
+import { assertProductionReady } from "./config/productionChecks.js";
 
 async function startServer() {
   try {
+    if (process.env.NODE_ENV === "production") {
+      assertProductionReady();
+    }
+
     await connectDatabase();
 
     const server = app.listen(config.port, () => {

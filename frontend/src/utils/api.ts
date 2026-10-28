@@ -37,31 +37,52 @@ export class ApiRequestError extends Error {
   }
 }
 
+function getStorageItem(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function setStorageItem(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore storage issues in private browsing or restricted environments
+  }
+}
+
+function removeStorageItem(key: string): void {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // ignore removal errors
+  }
+}
+
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_STORAGE_KEY);
+  return getStorageItem(TOKEN_STORAGE_KEY);
 }
 
 export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  setStorageItem(TOKEN_STORAGE_KEY, token);
 }
 
 export function clearToken(): void {
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  removeStorageItem(TOKEN_STORAGE_KEY);
 }
 
-// Role storage lives here (the shared API layer) rather than in AuthContext, so
-// the session-expiry handling below can read/clear it without duplicating a
-// second copy of this storage logic in another file.
 export function getStoredRole(): string | null {
-  return localStorage.getItem(ROLE_STORAGE_KEY);
+  return getStorageItem(ROLE_STORAGE_KEY);
 }
 
 export function setStoredRole(role: string): void {
-  localStorage.setItem(ROLE_STORAGE_KEY, role);
+  setStorageItem(ROLE_STORAGE_KEY, role);
 }
 
 export function clearStoredRole(): void {
-  localStorage.removeItem(ROLE_STORAGE_KEY);
+  removeStorageItem(ROLE_STORAGE_KEY);
 }
 
 function loginPathForRole(role: string | null): string {
@@ -73,7 +94,7 @@ function loginPathForRole(role: string | null): string {
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE" | "PUT";
   body?: unknown;
-  auth?: boolean; // attach Authorization header when true (default true)
+  auth?: boolean;
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -94,6 +115,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    credentials: "include",
   });
 
   // 204 No Content has no JSON body
@@ -141,6 +163,7 @@ export async function apiRequestMultipart<T>(path: string, formData: FormData): 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     body: formData,
+    credentials: "include",
   });
 
   const json = (await response.json().catch(() => null)) as ApiSuccess<T> | ApiErrorResponse | null;
